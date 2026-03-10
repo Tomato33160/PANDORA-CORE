@@ -45,26 +45,34 @@
 
     function generateLevel(lvl) {
         platforms = [];
-        // Sol de départ large et sécurisé
+        // Sol de départ large
         platforms.push({ x: 0, y: 620, w: 900, h: 80, c: '#00f2ff' });
 
         let lastY = 620;
-        // Génération de 6 plateformes avec une hauteur contrôlée
+        let lastX = 450; // On part du milieu
+
         for(let i = 0; i < 6; i++) {
-            let w = Math.max(90, 220 - (lvl * 2.5));
-            let x = Math.random() * (canvas.width - w);
-            // On s'assure que la plateforme ne monte pas trop haut trop vite
-            let y = lastY - 95; 
+            // Largeur de plateforme (plus généreuse au début)
+            let w = Math.max(100, 250 - (lvl * 3));
+            
+            // On limite l'écart horizontal pour éviter les sauts impossibles
+            let minX = Math.max(0, lastX - 250);
+            let maxX = Math.min(canvas.width - w, lastX + 250);
+            let x = Math.random() * (maxX - minX) + minX;
+            
+            // ESPACEMENT RÉDUIT : on passe à ~80 pixels d'écart vertical
+            let y = lastY - 82; 
             
             platforms.push({ x: x, y: y, w: w, h: 25, c: `hsl(${lvl * 25}, 100%, 60%)` });
+            
             lastY = y;
+            lastX = x;
         }
 
-        // PLACEMENT DU PORTAIL : On le force à être VISIBLE (minimum y = 50)
+        // PLACEMENT DU PORTAIL : Bien espacé mais accessible
         let topP = platforms[platforms.length - 1];
         goal.x = topP.x + (topP.w / 2) - 35;
-        // On remonte le portail : on passe de -85 à -110 pour plus d'espace
-        goal.y = Math.max(40, topP.y - 110);
+        goal.y = topP.y - 110; // Garde l'espace que tu voulais
     }
 
     function update() {
