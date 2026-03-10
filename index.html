@@ -2,12 +2,12 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>PANDORA // VOID JUMPER FIXED</title>
+    <title>PANDORA // VOID JUMPER STABLE</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; background: #020205; overflow: hidden; font-family: 'Orbitron', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
         canvas { background: #000; border: 2px solid #00f2ff; box-shadow: 0 0 20px rgba(0, 242, 255, 0.4); }
-        #hud { position: absolute; top: 20px; left: 20px; color: #00f2ff; pointer-events: none; text-shadow: 0 0 10px #00f2ff; }
+        #hud { position: absolute; top: 20px; left: 20px; color: #00f2ff; pointer-events: none; text-shadow: 0 0 10px #00f2ff; font-size: 1.2rem; }
     </style>
 </head>
 <body>
@@ -20,6 +20,7 @@
     const ctx = canvas.getContext('2d');
     canvas.width = 800; canvas.height = 600;
 
+    // Assets
     const assets = { player: new Image(), bg: new Image(), goal: new Image() };
     assets.player.src = 'player.png';
     assets.bg.src = 'background.png';
@@ -29,9 +30,11 @@
     let platforms = [];
     let goal = { x: 0, y: 0, w: 60, h: 60 };
     
+    // Joueur avec des valeurs par défaut sécurisées
     const player = {
-        x: 100, y: 100, w: 40, h: 40,
-        vx: 0, vy: 0, grounded: false,
+        x: 100, y: 300, w: 45, h: 45,
+        vx: 0, vy: 0,
+        grounded: false,
         speed: 0.8, jump: -12, friction: 0.8, gravity: 0.5
     };
 
@@ -41,47 +44,54 @@
 
     function generateLevel(lvl) {
         platforms = [];
-        // SOL DE DÉPART TRÈS ÉPAIS (Pour éviter de passer au travers)
-        platforms.push({ x: 0, y: 540, w: 800, h: 100, c: '#00f2ff' });
+        // PLATEFORME DE DÉPART IMMENSE (Impossible de passer à travers)
+        platforms.push({ x: 0, y: 500, w: 800, h: 100, c: '#00f2ff' });
 
-        let lastY = 540;
+        let lastY = 500;
         for(let i = 0; i < 7; i++) {
-            let w = Math.max(70, 180 - (lvl * 2));
+            let w = Math.max(80, 200 - (lvl * 2));
             let x = Math.random() * (canvas.width - w);
-            let y = lastY - 80;
-            platforms.push({ x: x, y: y, w: w, h: 20, c: `hsl(${lvl * 15}, 100%, 60%)` });
+            let y = lastY - 90; 
+            platforms.push({ x: x, y: y, w: w, h: 25, c: `hsl(${lvl * 20}, 100%, 60%)` });
             lastY = y;
         }
         let topP = platforms[platforms.length - 1];
         goal.x = topP.x + (topP.w / 2) - 30;
-        goal.y = topP.y - 70;
+        goal.y = topP.y - 80;
     }
 
     function update() {
+        // Mouvements
         if (keys['d'] || keys['arrowright']) player.vx += player.speed;
         if (keys['q'] || keys['a'] || keys['arrowleft']) player.vx -= player.speed;
+        
+        // Saut (Z ou Espace ou Flèche Haut)
         if ((keys['z'] || keys['w'] || keys['arrowup'] || keys[' ']) && player.grounded) {
             player.vy = player.jump;
             player.grounded = false;
         }
 
+        // Physique de base
         player.vy += player.gravity;
         player.vx *= player.friction;
         player.x += player.vx;
         player.y += player.vy;
 
+        // Empêcher de sortir des murs
         if (player.x < 0) player.x = 0;
         if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
 
-        // COLLISION AMÉLIORÉE
+        // LOGIQUE DE COLLISION RÉPARÉE
+        let wasGrounded = player.grounded;
         player.grounded = false;
+
         platforms.forEach(p => {
-            // Si le perso est au-dessus de la plateforme horizontalement
-            if (player.x + player.w > p.x && player.x < p.x + p.w) {
-                // Si le perso tombe (vy > 0) et qu'il franchit le haut de la plateforme
+            // Si le joueur tombe (vy >= 0) et est aligné horizontalement avec la plateforme
+            if (player.vx >= -20 && player.x + player.w > p.x && player.x < p.x + p.w) {
+                // Si ses pieds sont au niveau du haut de la plateforme
                 if (player.vy >= 0 && 
-                    player.y + player.h <= p.y + player.vy + 2 && 
-                    player.y + player.h >= p.y - 5) {
+                    player.y + player.h >= p.y && 
+                    player.y + player.h <= p.y + player.vy + 5) {
                     
                     player.grounded = true;
                     player.vy = 0;
@@ -90,36 +100,63 @@
             }
         });
 
+        // Condition de Victoire
         if (player.x < goal.x + goal.w && player.x + player.w > goal.x &&
             player.y < goal.y + goal.h && player.y + player.h > goal.y) {
             currentSector++;
+            if (currentSector > 50) currentSector = 1;
             document.getElementById('sector-val').innerText = currentSector;
-            player.x = 100; player.y = 100; player.vx = 0; player.vy = 0;
+            resetPlayer();
             generateLevel(currentSector);
         }
 
-        // FAIL-SAFE : Si vraiment il tombe, on le remet sur la plateforme de départ
-        if (player.y > canvas.height + 200) {
-            player.x = 100; player.y = 400; player.vx = 0; player.vy = 0;
+        // PROTECTION ANTI-DESPAWN (Si le joueur tombe trop bas)
+        if (player.y > canvas.height + 100) {
+            resetPlayer();
         }
+    }
+
+    function resetPlayer() {
+        player.x = 100;
+        player.y = 300; // Spawn en l'air au-dessus de la première plateforme
+        player.vx = 0;
+        player.vy = 0;
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (assets.bg.complete && assets.bg.naturalWidth !== 0) ctx.drawImage(assets.bg, 0, 0, canvas.width, canvas.height);
-        
+
+        // Fond
+        if (assets.bg.complete && assets.bg.naturalWidth !== 0) {
+            ctx.drawImage(assets.bg, 0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = "#050515"; ctx.fillRect(0,0,800,600);
+        }
+
+        // Plateformes
         platforms.forEach(p => {
-            ctx.fillStyle = p.c + "44"; ctx.strokeStyle = p.c;
-            ctx.fillRect(p.x, p.y, p.w, p.h); ctx.strokeRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = p.c + "66"; // Plus visible
+            ctx.strokeStyle = p.c;
+            ctx.lineWidth = 3;
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.strokeRect(p.x, p.y, p.w, p.h);
         });
 
-        if (assets.goal.complete) ctx.drawImage(assets.goal, goal.x, goal.y, goal.w, goal.h);
+        // Portail
+        if (assets.goal.complete && assets.goal.naturalWidth !== 0) {
+            ctx.drawImage(assets.goal, goal.x, goal.y, goal.w, goal.h);
+        } else {
+            ctx.fillStyle = "#00f2ff"; ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
+        }
 
-        // DESSIN JOUEUR AVEC CARRÉ DE SECOURS SI PNG ABSENT
+        // Joueur (Carré de secours si l'image bug)
         if (assets.player.complete && assets.player.naturalWidth !== 0) {
             ctx.drawImage(assets.player, player.x, player.y, player.w, player.h);
         } else {
-            ctx.fillStyle = "#ff007f"; ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.fillStyle = "#ff007f"; 
+            ctx.shadowBlur = 15; ctx.shadowColor = "#ff007f";
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.shadowBlur = 0;
         }
 
         update();
