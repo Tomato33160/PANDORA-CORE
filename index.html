@@ -2,202 +2,203 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>PANDORA MULTIVERSE // HUB</title>
+    <title>PANDORA MULTIVERSE // STABLE V3</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
         :root { --neon: #00f2ff; --pink: #ff007f; --bg: #050508; }
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: #fff; font-family: 'Share Tech Mono', monospace; overflow: hidden; }
 
-        /* LAYOUT PRINCIPAL */
-        .main-container {
-            display: grid;
-            grid-template-columns: 1fr 350px; /* Le milieu prend tout l'espace, le chat 350px */
-            height: 100vh;
-        }
+        /* LAYOUT */
+        .main-container { display: grid; grid-template-columns: 1fr 350px; height: 100vh; }
 
-        /* ZONE DE JEU / MENU (MILIEU) */
-        #game-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border-right: 1px solid #222;
-            position: relative;
-        }
+        /* MILIEU : MENU & JEU */
+        #viewport { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid #222; background: radial-gradient(circle, #101015 0%, #000 100%); }
+        canvas { background: #000; border: 2px solid var(--neon); display: none; cursor: none; }
+        
+        .game-grid { display: grid; grid-template-columns: repeat(2, 200px); gap: 20px; }
+        .card { width: 200px; height: 120px; background: #0a0a0f; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
+        .card:hover { border-color: var(--neon); box-shadow: 0 0 15px var(--neon); }
+        .locked { opacity: 0.4; cursor: not-allowed; border-style: dashed; }
 
-        .game-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 220px);
-            gap: 20px;
-        }
-
-        .game-card {
-            width: 220px; height: 150px;
-            background: #0a0a0f; border: 1px solid #333;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            cursor: pointer; transition: 0.3s; position: relative;
-        }
-
-        .game-card.active:hover { border-color: var(--neon); box-shadow: 0 0 15px var(--neon); transform: translateY(-5px); }
-        .game-card.locked { opacity: 0.5; cursor: not-allowed; border-style: dashed; }
-        .game-card h3 { font-family: 'Orbitron'; font-size: 0.8rem; margin-top: 10px; }
-        .badge { font-size: 0.6rem; color: var(--pink); border: 1px solid var(--pink); padding: 2px 5px; position: absolute; top: 10px; right: 10px; }
-
-        /* CHAT LATÉRAL (DROITE) */
-        #side-chat {
-            display: flex; flex-direction: column;
-            background: #08080c; border-left: 1px solid #222;
-        }
-
+        /* DROITE : CHAT */
+        #side-chat { display: flex; flex-direction: column; background: #08080c; border-left: 1px solid #222; }
         .chat-tabs { display: flex; border-bottom: 1px solid #222; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-family: 'Orbitron'; font-size: 0.7rem; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 0.7rem; font-family: 'Orbitron'; }
         .tab.active { color: var(--neon); border-bottom: 2px solid var(--neon); background: #10101a; }
-
-        #chat-content { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.85rem; }
-        .msg { margin-bottom: 10px; line-height: 1.4; }
+        
+        #chat-msgs { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.8rem; }
+        .msg { margin-bottom: 8px; border-bottom: 1px solid #111; padding-bottom: 4px; }
         .msg b { color: var(--neon); }
-        .msg.private { color: var(--pink); font-style: italic; }
+        .private-tag { color: var(--pink); font-size: 0.6rem; border: 1px solid var(--pink); padding: 1px 3px; margin-right: 5px; }
 
-        .chat-input-area { padding: 15px; border-top: 1px solid #222; }
-        input { 
-            width: 100%; background: #000; border: 1px solid #333; color: #fff; 
-            padding: 10px; font-family: 'Share Tech Mono'; outline: none; box-sizing: border-box;
-        }
-
-        /* CANVAS DU JEU */
-        #gameCanvas { display: none; background: #000; border: 1px solid var(--neon); }
-        #btn-back { display: none; margin-top: 20px; color: var(--pink); cursor: pointer; text-decoration: underline; }
+        .chat-ctrl { padding: 15px; border-top: 1px solid #222; background: #050508; }
+        input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 8px; font-family: 'Share Tech Mono'; outline: none; margin-bottom: 5px; }
+        
+        #btn-back { display: none; position: absolute; top: 20px; left: 20px; color: var(--pink); cursor: pointer; z-index: 10; }
     </style>
 </head>
 <body>
 
-    <div class="main-container">
-        <div id="game-area">
-            <h1 id="menu-title" style="font-family:'Orbitron'; margin-bottom: 30px;">PANDORA <span style="color:var(--neon)">MULTIVERSE</span></h1>
-            
-            <div class="game-grid" id="menu-grid">
-                <div class="game-card active" onclick="startGame()">
-                    <div style="font-size: 2rem;">🚀</div>
-                    <h3>VOID JUMPER</h3>
-                </div>
-                <div class="game-card locked">
-                    <div class="badge">WIP</div>
-                    <div style="font-size: 2rem;">⚔️</div>
-                    <h3>DATA WARS</h3>
-                </div>
-                <div class="game-card locked">
-                    <div class="badge">WIP</div>
-                    <div style="font-size: 2rem;">🚗</div>
-                    <h3>NEON DRIFT</h3>
-                </div>
-                <div class="game-card locked">
-                    <div class="badge">WIP</div>
-                    <div style="font-size: 2rem;">🦠</div>
-                    <h3>GLITCH HUNT</h3>
-                </div>
+<div class="main-container">
+    <div id="viewport">
+        <div id="btn-back" onclick="location.reload()">[ QUITTER LE JEU ]</div>
+        
+        <h1 id="ui-title" style="font-family:'Orbitron';">PANDORA <span style="color:var(--neon)">OS</span></h1>
+        
+        <div class="game-grid" id="ui-menu">
+            <div class="card" onclick="launchGame()">
+                <span style="font-size:1.5rem">🚀</span>
+                <h3 style="font-family:'Orbitron'; font-size:0.7rem">VOID JUMPER</h3>
             </div>
-
-            <canvas id="gameCanvas"></canvas>
-            <div id="btn-back" onclick="backToMenu()">[ RETOUR AU HUB ]</div>
+            <div class="card locked"><span>⚔️</span><h3 style="font-size:0.7rem">DATA WARS</h3></div>
+            <div class="card locked"><span>🚗</span><h3 style="font-size:0.7rem">NEON DRIFT</h3></div>
+            <div class="card locked"><span>🦠</span><h3 style="font-size:0.7rem">GLITCH HUNT</h3></div>
         </div>
 
-        <div id="side-chat">
-            <div class="chat-tabs">
-                <div class="tab active" id="tab-public" onclick="switchChat('public')">PUBLIC</div>
-                <div class="tab" id="tab-private" onclick="switchChat('private')">PRIVE</div>
-            </div>
-            <div id="chat-content">
-                <div class="msg"><b>[SYSTEM]</b> Bienvenue dans le Multiverse, Agent.</div>
-            </div>
-            <div class="chat-input-area">
-                <input type="text" id="chat-input" placeholder="Ecrire un message...">
-            </div>
-        </div>
+        <canvas id="gameCanvas"></canvas>
     </div>
 
+    <div id="side-chat">
+        <div class="chat-tabs">
+            <div class="tab active" id="t-pub" onclick="setChat('public')">PUBLIC</div>
+            <div class="tab" id="t-priv" onclick="setChat('private')">PRIVE</div>
+        </div>
+        <div id="chat-msgs">
+            <div class="msg"><b>[SYS]</b> Connecté au Nexus Pandora.</div>
+        </div>
+        <div class="chat-ctrl">
+            <input type="text" id="session-code" placeholder="CODE SESSION (Ex: 1234)" style="font-size:0.6rem; border-color:var(--pink); display:none;">
+            <input type="text" id="chat-in" placeholder="Message...">
+        </div>
+    </div>
+</div>
+
 <script>
-    // --- LOGIQUE DU CHAT ---
-    let currentTab = 'public';
-    const chatInput = document.getElementById('chat-input');
-    const chatContent = document.getElementById('chat-content');
+    // --- GESTION CHAT & SESSION ---
+    let chatMode = 'public';
+    const chatIn = document.getElementById('chat-in');
+    const chatMsgs = document.getElementById('chat-msgs');
+    const sessionIn = document.getElementById('session-code');
 
-    function switchChat(type) {
-        currentTab = type;
-        document.getElementById('tab-public').className = type === 'public' ? 'tab active' : 'tab';
-        document.getElementById('tab-private').className = type === 'private' ? 'tab active' : 'tab';
-        chatContent.innerHTML += `<div class="msg" style="opacity:0.5;">-- Canal ${type.toUpperCase()} activé --</div>`;
+    function setChat(mode) {
+        chatMode = mode;
+        document.getElementById('t-pub').className = mode === 'public' ? 'tab active' : 'tab';
+        document.getElementById('t-priv').className = mode === 'private' ? 'tab active' : 'tab';
+        sessionIn.style.display = mode === 'private' ? 'block' : 'none';
     }
 
-    chatInput.addEventListener('keypress', (e) => {
-        if(e.key === 'Enter' && chatInput.value !== '') {
-            const cls = currentTab === 'private' ? 'msg private' : 'msg';
-            const label = currentTab === 'private' ? '[MP] Moi' : 'Moi';
-            chatContent.innerHTML += `<div class="${cls}"><b>${label}:</b> ${chatInput.value}</div>`;
-            chatInput.value = '';
-            chatContent.scrollTop = chatContent.scrollHeight;
+    chatIn.onkeydown = (e) => {
+        if(e.key === 'Enter' && chatIn.value !== "") {
+            let prefix = chatMode === 'private' ? `<span class="private-tag">SESS:${sessionIn.value || '????'}</span>` : '';
+            chatMsgs.innerHTML += `<div class="msg">${prefix}<b>Moi:</b> ${chatIn.value}</div>`;
+            chatIn.value = "";
+            chatMsgs.scrollTop = chatMsgs.scrollHeight;
         }
-    });
+    };
 
-    // --- LOGIQUE DE NAVIGATION ---
+    // --- MOTEUR DE JEU (VOID JUMPER) ---
     const canvas = document.getElementById('gameCanvas');
-    const menuGrid = document.getElementById('menu-grid');
-    const menuTitle = document.getElementById('menu-title');
-    const btnBack = document.getElementById('btn-back');
-
-    function startGame() {
-        menuGrid.style.display = 'none';
-        menuTitle.style.display = 'none';
-        canvas.style.display = 'block';
-        btnBack.style.display = 'block';
-        initGame(); // Lance ton jeu
-    }
-
-    function backToMenu() {
-        location.reload(); // Le plus simple pour reset le jeu proprement
-    }
-
-    // --- TON CODE VOID JUMPER (SYNTHÉTISÉ) ---
     const ctx = canvas.getContext('2d');
-    canvas.width = 700; canvas.height = 500; // Un peu plus petit pour le hub
+    canvas.width = 800; canvas.height = 600;
 
-    const player = { x: 50, y: 300, w: 30, h: 30, vx: 0, vy: 0, grounded: false };
+    const imgP = new Image(); imgP.src = 'player.png';
+    const imgB = new Image(); imgB.src = 'background.png';
+
+    let currentLvl = 1;
     let platforms = [];
-    let goal = { x: 0, y: 0, w: 50, h: 50 };
+    let goal = {x:0, y:0, w:60, h:60};
+    
+    const player = {
+        x:100, y:400, w:45, h:45, vx:0, vy:0,
+        grounded: false, speed:0.9, jump:-13, gravity:0.55, friction:0.85
+    };
 
-    function initGame() {
-        generateLevel(1);
-        requestAnimationFrame(gameLoop);
-    }
+    const keys = {};
+    window.onkeydown = (e) => { 
+        keys[e.key.toLowerCase()] = true;
+        // Empêche le scroll avec les flèches pendant qu'on joue
+        if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+    };
+    window.onkeyup = (e) => { keys[e.key.toLowerCase()] = false; };
 
-    function generateLevel(lvl) {
-        platforms = [{ x: 0, y: 450, w: 700, h: 50, c: '#00f2ff' }];
-        let lastY = 450;
-        for(let i=0; i<5; i++) {
-            let y = lastY - 80;
-            platforms.push({ x: Math.random()*500, y: y, w: 120, h: 15, c: `hsl(${lvl*30}, 100%, 50%)` });
-            lastY = y;
+    function generate(lvl) {
+        platforms = [{x:0, y:550, w:800, h:50, c:'#00f2ff'}];
+        let ly = 550;
+        for(let i=0; i<7; i++) {
+            let w = Math.max(80, 200 - (lvl*2));
+            let x = Math.random()*(800-w);
+            let y = ly - 85;
+            platforms.push({x, y, w, h:20, c:`hsl(${lvl*20}, 100%, 60%)`});
+            ly = y;
         }
-        goal = { x: platforms[5].x + 30, y: platforms[5].y - 70, w: 50, h: 50 };
+        goal.x = platforms[7].x + 10;
+        goal.y = platforms[7].y - 100;
     }
 
-    function gameLoop() {
-        if(canvas.style.display === 'none') return;
-        ctx.clearRect(0,0,700,500);
-        
-        // Physique simplifiée (reprends ton code complet ici)
-        player.vy += 0.5; player.y += player.vy;
+    function update() {
+        if(keys['d'] || keys['arrowright']) player.vx += player.speed;
+        if(keys['q'] || keys['a'] || keys['arrowleft']) player.vx -= player.speed;
+        if((keys['z'] || keys['w'] || keys['arrowup'] || keys[' ']) && player.grounded) {
+            player.vy = player.jump;
+            player.grounded = false;
+        }
+
+        player.vy += player.gravity;
+        player.vx *= player.friction;
+        player.x += player.vx;
+        player.y += player.vy;
+
+        if(player.x < 0) player.x = 0;
+        if(player.x + player.w > 800) player.x = 800 - player.w;
+
         player.grounded = false;
         platforms.forEach(p => {
-            if(player.y+player.h > p.y && player.y+player.h < p.y+15 && player.x+player.w > p.x && player.x < p.x+p.w) {
-                player.grounded = true; player.vy = 0; player.y = p.y-player.h;
+            if(player.x+player.w > p.x && player.x < p.x+p.w && player.vy >= 0 &&
+               player.y+player.h >= p.y && player.y+player.h <= p.y + player.vy + 10) {
+                player.grounded = true; player.vy = 0; player.y = p.y - player.h;
             }
-            ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.w, p.h);
         });
+
+        if(player.x < goal.x+60 && player.x+45 > goal.x && player.y < goal.y+60 && player.y+45 > goal.y) {
+            currentLvl++;
+            generate(currentLvl);
+            player.x=100; player.y=400;
+        }
+        if(player.y > 700) { player.x=100; player.y=400; player.vx=0; player.vy=0; }
+    }
+
+    function draw() {
+        if(canvas.style.display === 'none') return;
+        ctx.clearRect(0,0,800,600);
         
-        ctx.fillStyle = "#00f2ff"; ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
-        ctx.fillStyle = "#ff007f"; ctx.fillRect(player.x, player.y, player.w, player.h);
+        if(imgB.complete && imgB.naturalWidth !== 0) ctx.drawImage(imgB, 0, 0, 800, 600);
         
-        requestAnimationFrame(gameLoop);
+        platforms.forEach(p => {
+            ctx.fillStyle = p.c+"44"; ctx.strokeStyle = p.c;
+            ctx.fillRect(p.x, p.y, p.w, p.h); ctx.strokeRect(p.x, p.y, p.w, p.h);
+        });
+
+        ctx.fillStyle = varColor = "#00f2ff";
+        ctx.strokeRect(goal.x, goal.y, 60, 60);
+
+        if(imgP.complete && imgP.naturalWidth !== 0) {
+            ctx.drawImage(imgP, player.x, player.y, player.w, player.h);
+        } else {
+            ctx.fillStyle = "#ff007f"; ctx.fillRect(player.x, player.y, player.w, player.h);
+        }
+
+        update();
+        requestAnimationFrame(draw);
+    }
+
+    function launchGame() {
+        document.getElementById('ui-menu').style.display = 'none';
+        document.getElementById('ui-title').style.display = 'none';
+        canvas.style.display = 'block';
+        document.getElementById('btn-back').style.display = 'block';
+        generate(1);
+        draw();
+        canvas.focus(); // TRÈS IMPORTANT : donne le focus au jeu pour bouger
     }
 </script>
 </body>
