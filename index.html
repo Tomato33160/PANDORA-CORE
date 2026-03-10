@@ -2,163 +2,203 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>PANDORA // VOID JUMPER : FULL ACCESS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap" rel="stylesheet">
+    <title>PANDORA MULTIVERSE // HUB</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #020205; overflow: hidden; font-family: 'Orbitron', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        /* On augmente la taille du Canvas pour plus d'espace */
-        canvas { background: #000; border: 3px solid #00f2ff; box-shadow: 0 0 30px rgba(0, 242, 255, 0.5); max-height: 90vh; }
-        #hud { color: #00f2ff; text-shadow: 0 0 10px #00f2ff; font-size: 1.5rem; margin-bottom: 10px; }
+        :root { --neon: #00f2ff; --pink: #ff007f; --bg: #050508; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: #fff; font-family: 'Share Tech Mono', monospace; overflow: hidden; }
+
+        /* LAYOUT PRINCIPAL */
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 350px; /* Le milieu prend tout l'espace, le chat 350px */
+            height: 100vh;
+        }
+
+        /* ZONE DE JEU / MENU (MILIEU) */
+        #game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid #222;
+            position: relative;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 220px);
+            gap: 20px;
+        }
+
+        .game-card {
+            width: 220px; height: 150px;
+            background: #0a0a0f; border: 1px solid #333;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.3s; position: relative;
+        }
+
+        .game-card.active:hover { border-color: var(--neon); box-shadow: 0 0 15px var(--neon); transform: translateY(-5px); }
+        .game-card.locked { opacity: 0.5; cursor: not-allowed; border-style: dashed; }
+        .game-card h3 { font-family: 'Orbitron'; font-size: 0.8rem; margin-top: 10px; }
+        .badge { font-size: 0.6rem; color: var(--pink); border: 1px solid var(--pink); padding: 2px 5px; position: absolute; top: 10px; right: 10px; }
+
+        /* CHAT LATÉRAL (DROITE) */
+        #side-chat {
+            display: flex; flex-direction: column;
+            background: #08080c; border-left: 1px solid #222;
+        }
+
+        .chat-tabs { display: flex; border-bottom: 1px solid #222; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-family: 'Orbitron'; font-size: 0.7rem; }
+        .tab.active { color: var(--neon); border-bottom: 2px solid var(--neon); background: #10101a; }
+
+        #chat-content { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.85rem; }
+        .msg { margin-bottom: 10px; line-height: 1.4; }
+        .msg b { color: var(--neon); }
+        .msg.private { color: var(--pink); font-style: italic; }
+
+        .chat-input-area { padding: 15px; border-top: 1px solid #222; }
+        input { 
+            width: 100%; background: #000; border: 1px solid #333; color: #fff; 
+            padding: 10px; font-family: 'Share Tech Mono'; outline: none; box-sizing: border-box;
+        }
+
+        /* CANVAS DU JEU */
+        #gameCanvas { display: none; background: #000; border: 1px solid var(--neon); }
+        #btn-back { display: none; margin-top: 20px; color: var(--pink); cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
 
-    <div id="hud">SECTEUR: <span id="sector-val">1</span> / 50</div>
-    <canvas id="gameCanvas"></canvas>
+    <div class="main-container">
+        <div id="game-area">
+            <h1 id="menu-title" style="font-family:'Orbitron'; margin-bottom: 30px;">PANDORA <span style="color:var(--neon)">MULTIVERSE</span></h1>
+            
+            <div class="game-grid" id="menu-grid">
+                <div class="game-card active" onclick="startGame()">
+                    <div style="font-size: 2rem;">🚀</div>
+                    <h3>VOID JUMPER</h3>
+                </div>
+                <div class="game-card locked">
+                    <div class="badge">WIP</div>
+                    <div style="font-size: 2rem;">⚔️</div>
+                    <h3>DATA WARS</h3>
+                </div>
+                <div class="game-card locked">
+                    <div class="badge">WIP</div>
+                    <div style="font-size: 2rem;">🚗</div>
+                    <h3>NEON DRIFT</h3>
+                </div>
+                <div class="game-card locked">
+                    <div class="badge">WIP</div>
+                    <div style="font-size: 2rem;">🦠</div>
+                    <h3>GLITCH HUNT</h3>
+                </div>
+            </div>
+
+            <canvas id="gameCanvas"></canvas>
+            <div id="btn-back" onclick="backToMenu()">[ RETOUR AU HUB ]</div>
+        </div>
+
+        <div id="side-chat">
+            <div class="chat-tabs">
+                <div class="tab active" id="tab-public" onclick="switchChat('public')">PUBLIC</div>
+                <div class="tab" id="tab-private" onclick="switchChat('private')">PRIVE</div>
+            </div>
+            <div id="chat-content">
+                <div class="msg"><b>[SYSTEM]</b> Bienvenue dans le Multiverse, Agent.</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Ecrire un message...">
+            </div>
+        </div>
+    </div>
 
 <script>
+    // --- LOGIQUE DU CHAT ---
+    let currentTab = 'public';
+    const chatInput = document.getElementById('chat-input');
+    const chatContent = document.getElementById('chat-content');
+
+    function switchChat(type) {
+        currentTab = type;
+        document.getElementById('tab-public').className = type === 'public' ? 'tab active' : 'tab';
+        document.getElementById('tab-private').className = type === 'private' ? 'tab active' : 'tab';
+        chatContent.innerHTML += `<div class="msg" style="opacity:0.5;">-- Canal ${type.toUpperCase()} activé --</div>`;
+    }
+
+    chatInput.addEventListener('keypress', (e) => {
+        if(e.key === 'Enter' && chatInput.value !== '') {
+            const cls = currentTab === 'private' ? 'msg private' : 'msg';
+            const label = currentTab === 'private' ? '[MP] Moi' : 'Moi';
+            chatContent.innerHTML += `<div class="${cls}"><b>${label}:</b> ${chatInput.value}</div>`;
+            chatInput.value = '';
+            chatContent.scrollTop = chatContent.scrollHeight;
+        }
+    });
+
+    // --- LOGIQUE DE NAVIGATION ---
     const canvas = document.getElementById('gameCanvas');
+    const menuGrid = document.getElementById('menu-grid');
+    const menuTitle = document.getElementById('menu-title');
+    const btnBack = document.getElementById('btn-back');
+
+    function startGame() {
+        menuGrid.style.display = 'none';
+        menuTitle.style.display = 'none';
+        canvas.style.display = 'block';
+        btnBack.style.display = 'block';
+        initGame(); // Lance ton jeu
+    }
+
+    function backToMenu() {
+        location.reload(); // Le plus simple pour reset le jeu proprement
+    }
+
+    // --- TON CODE VOID JUMPER (SYNTHÉTISÉ) ---
     const ctx = canvas.getContext('2d');
-    
-    // NOUVELLES DIMENSIONS : Plus haut pour mieux voir les portails
-    canvas.width = 900; 
-    canvas.height = 700; 
+    canvas.width = 700; canvas.height = 500; // Un peu plus petit pour le hub
 
-    const assets = { player: new Image(), bg: new Image(), goal: new Image() };
-    assets.player.src = 'player.png';
-    assets.bg.src = 'background.png';
-    assets.goal.src = 'goal.png';
-
-    let currentSector = 1;
+    const player = { x: 50, y: 300, w: 30, h: 30, vx: 0, vy: 0, grounded: false };
     let platforms = [];
-    let goal = { x: 0, y: 0, w: 70, h: 70 }; // Portail un peu plus grand
-    
-    const player = {
-        x: 100, y: 300, w: 45, h: 45,
-        vx: 0, vy: 0, grounded: false,
-        speed: 0.9, jump: -13, friction: 0.85, gravity: 0.55
-    };
+    let goal = { x: 0, y: 0, w: 50, h: 50 };
 
-    const keys = {};
-    window.onkeydown = e => keys[e.key.toLowerCase()] = true;
-    window.onkeyup = e => keys[e.key.toLowerCase()] = false;
+    function initGame() {
+        generateLevel(1);
+        requestAnimationFrame(gameLoop);
+    }
 
     function generateLevel(lvl) {
-        platforms = [];
-        // Sol de départ large
-        platforms.push({ x: 0, y: 620, w: 900, h: 80, c: '#00f2ff' });
-
-        let lastY = 620;
-        let lastX = 450; // On part du milieu
-
-        for(let i = 0; i < 6; i++) {
-            // Largeur de plateforme (plus généreuse au début)
-            let w = Math.max(100, 250 - (lvl * 3));
-            
-            // On limite l'écart horizontal pour éviter les sauts impossibles
-            let minX = Math.max(0, lastX - 250);
-            let maxX = Math.min(canvas.width - w, lastX + 250);
-            let x = Math.random() * (maxX - minX) + minX;
-            
-            // ESPACEMENT RÉDUIT : on passe à ~80 pixels d'écart vertical
-            let y = lastY - 82; 
-            
-            platforms.push({ x: x, y: y, w: w, h: 25, c: `hsl(${lvl * 25}, 100%, 60%)` });
-            
+        platforms = [{ x: 0, y: 450, w: 700, h: 50, c: '#00f2ff' }];
+        let lastY = 450;
+        for(let i=0; i<5; i++) {
+            let y = lastY - 80;
+            platforms.push({ x: Math.random()*500, y: y, w: 120, h: 15, c: `hsl(${lvl*30}, 100%, 50%)` });
             lastY = y;
-            lastX = x;
         }
-
-        // PLACEMENT DU PORTAIL : Bien espacé mais accessible
-        let topP = platforms[platforms.length - 1];
-        goal.x = topP.x + (topP.w / 2) - 35;
-        goal.y = topP.y - 110; // Garde l'espace que tu voulais
+        goal = { x: platforms[5].x + 30, y: platforms[5].y - 70, w: 50, h: 50 };
     }
 
-    function update() {
-        if (keys['d'] || keys['arrowright']) player.vx += player.speed;
-        if (keys['q'] || keys['a'] || keys['arrowleft']) player.vx -= player.speed;
-        if ((keys['z'] || keys['w'] || keys['arrowup'] || keys[' ']) && player.grounded) {
-            player.vy = player.jump;
-            player.grounded = false;
-        }
-
-        player.vy += player.gravity;
-        player.vx *= player.friction;
-        player.x += player.vx;
-        player.y += player.vy;
-
-        if (player.x < 0) player.x = 0;
-        if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
-
+    function gameLoop() {
+        if(canvas.style.display === 'none') return;
+        ctx.clearRect(0,0,700,500);
+        
+        // Physique simplifiée (reprends ton code complet ici)
+        player.vy += 0.5; player.y += player.vy;
         player.grounded = false;
         platforms.forEach(p => {
-            if (player.x + player.w > p.x && player.x < p.x + p.w) {
-                if (player.vy >= 0 && 
-                    player.y + player.h >= p.y && 
-                    player.y + player.h <= p.y + player.vy + 10) {
-                    player.grounded = true;
-                    player.vy = 0;
-                    player.y = p.y - player.h;
-                }
+            if(player.y+player.h > p.y && player.y+player.h < p.y+15 && player.x+player.w > p.x && player.x < p.x+p.w) {
+                player.grounded = true; player.vy = 0; player.y = p.y-player.h;
             }
+            ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.w, p.h);
         });
-
-        // Victoire
-        if (player.x < goal.x + goal.w && player.x + player.w > goal.x &&
-            player.y < goal.y + goal.h && player.y + player.h > goal.y) {
-            currentSector++;
-            if (currentSector > 50) currentSector = 1;
-            document.getElementById('sector-val').innerText = currentSector;
-            resetPlayer();
-            generateLevel(currentSector);
-        }
-
-        if (player.y > canvas.height + 100) resetPlayer();
+        
+        ctx.fillStyle = "#00f2ff"; ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
+        ctx.fillStyle = "#ff007f"; ctx.fillRect(player.x, player.y, player.w, player.h);
+        
+        requestAnimationFrame(gameLoop);
     }
-
-    function resetPlayer() {
-        player.x = 100;
-        player.y = 400;
-        player.vx = 0;
-        player.vy = 0;
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        if (assets.bg.complete && assets.bg.naturalWidth !== 0) {
-            ctx.drawImage(assets.bg, 0, 0, canvas.width, canvas.height);
-        } else {
-            ctx.fillStyle = "#050515"; ctx.fillRect(0,0,canvas.width,canvas.height);
-        }
-
-        platforms.forEach(p => {
-            ctx.fillStyle = p.c + "66"; ctx.strokeStyle = p.c; ctx.lineWidth = 3;
-            ctx.fillRect(p.x, p.y, p.w, p.h); ctx.strokeRect(p.x, p.y, p.w, p.h);
-        });
-
-        // Dessin du Portail (toujours prioritaire)
-        if (assets.goal.complete && assets.goal.naturalWidth !== 0) {
-            ctx.shadowBlur = 20; ctx.shadowColor = "#00f2ff";
-            ctx.drawImage(assets.goal, goal.x, goal.y, goal.w, goal.h);
-            ctx.shadowBlur = 0;
-        } else {
-            ctx.fillStyle = "#00f2ff"; ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
-        }
-
-        if (assets.player.complete && assets.player.naturalWidth !== 0) {
-            ctx.drawImage(assets.player, player.x, player.y, player.w, player.h);
-        } else {
-            ctx.fillStyle = "#ff007f"; ctx.fillRect(player.x, player.y, player.w, player.h);
-        }
-
-        update();
-        requestAnimationFrame(draw);
-    }
-
-    generateLevel(1);
-    draw();
 </script>
 </body>
 </html>
