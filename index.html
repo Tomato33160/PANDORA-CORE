@@ -64,13 +64,19 @@
         // Limites et collisions
         player.grounded = false;
         platforms.forEach(p => {
-            if (player.x + player.w > p.x && player.x < p.x + p.w &&
-                player.y + player.h > p.y && player.y + player.h < p.y + p.vy + 10) {
-                player.grounded = true;
-                player.vy = 0;
-                player.y = p.y - player.h;
-            }
-        });
+            // Vérification horizontale
+            if (player.x + player.w > p.x && player.x < p.x + p.w) {
+            // Vérification verticale : si le joueur tombe et franchit le seuil de la plateforme
+            if (player.vy >= 0 && 
+            player.y + player.h <= p.y + player.vy && 
+            player.y + player.h + player.vy >= p.y) {
+            
+            player.grounded = true;
+            player.vy = 0;
+            player.y = p.y - player.h;
+        }
+    }
+});
 
         document.getElementById('alt').innerText = Math.round(600 - player.y);
     }
