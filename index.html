@@ -63,7 +63,8 @@
         // PLACEMENT DU PORTAIL : On le force à être VISIBLE (minimum y = 50)
         let topP = platforms[platforms.length - 1];
         goal.x = topP.x + (topP.w / 2) - 35;
-        goal.y = Math.max(50, topP.y - 85); 
+        // On remonte le portail : on passe de -85 à -110 pour plus d'espace
+        goal.y = Math.max(40, topP.y - 110);
     }
 
     function update() {
