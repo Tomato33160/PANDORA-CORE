@@ -2,54 +2,69 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>PANDORA MULTIVERSE // PORTAL FIX</title>
+    <title>PANDORA MULTIVERSE // INF-ASCENSION</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
         :root { --neon: #00f2ff; --pink: #ff007f; --bg: #050508; }
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: #fff; font-family: 'Share Tech Mono', monospace; overflow: hidden; }
+
         .main-container { display: grid; grid-template-columns: 1fr 350px; height: 100vh; }
-        #viewport { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid #222; }
+
+        /* ZONE CENTRALE */
+        #viewport { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid #222; overflow: hidden; }
         canvas { background: #000; border: 2px solid var(--neon); display: none; }
+        
+        #ui-title { font-family: 'Orbitron'; font-weight: 900; letter-spacing: 5px; margin-bottom: 30px; }
         .game-grid { display: grid; grid-template-columns: repeat(2, 200px); gap: 20px; }
-        .card { width: 200px; height: 120px; background: #0a0a0f; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
-        .card:hover { border-color: var(--neon); box-shadow: 0 0 15px var(--neon); }
+        .card { width: 200px; height: 120px; background: #0a0a0f; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
+        .card:hover { border-color: var(--neon); box-shadow: 0 0 15px var(--neon); transform: scale(1.05); }
+        .card h3 { font-family: 'Orbitron'; font-size: 0.7rem; margin-top: 10px; }
+
+        /* CHAT LATÉRAL */
         #side-chat { display: flex; flex-direction: column; background: #08080c; border-left: 1px solid #222; }
         .chat-tabs { display: flex; border-bottom: 1px solid #222; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-family: 'Orbitron'; font-size: 0.7rem; }
-        .tab.active { color: var(--neon); border-bottom: 2px solid var(--neon); }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-family: 'Orbitron'; font-size: 0.7rem; opacity: 0.5; }
+        .tab.active { opacity: 1; color: var(--neon); border-bottom: 2px solid var(--neon); background: #10101a; }
         #chat-msgs { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.8rem; }
-        .chat-ctrl { padding: 15px; border-top: 1px solid #222; }
-        input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 8px; font-family: 'Share Tech Mono'; outline: none; }
-        #btn-back { display: none; position: absolute; top: 20px; left: 20px; color: var(--pink); cursor: pointer; }
+        .msg { margin-bottom: 8px; border-bottom: 1px solid #151515; padding-bottom: 4px; }
+        .msg b { color: var(--neon); }
+        .private-msg { color: var(--pink); font-style: italic; }
+
+        .chat-ctrl { padding: 15px; border-top: 1px solid #222; background: #050508; }
+        input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 10px; font-family: 'Share Tech Mono'; outline: none; box-sizing: border-box; }
+        
+        #btn-back { display: none; position: absolute; top: 20px; left: 20px; color: var(--pink); cursor: pointer; z-index: 100; font-family: 'Orbitron'; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
 <div class="main-container">
     <div id="viewport">
-        <div id="btn-back" onclick="location.reload()">[ RETOUR MENU ]</div>
-        <h1 id="ui-title" style="font-family:'Orbitron';">PANDORA <span style="color:var(--neon)">OS</span></h1>
+        <div id="btn-back" onclick="location.reload()">[ QUITTER ]</div>
+        <h1 id="ui-title">PANDORA <span style="color:var(--neon)">MULTIVERSE</span></h1>
+        
         <div class="game-grid" id="ui-menu">
             <div class="card" onclick="launchGame()">
-                <span style="font-size:1.5rem">🚀</span>
-                <h3 style="font-family:'Orbitron'; font-size:0.7rem">VOID JUMPER</h3>
+                <span style="font-size: 2rem;">🚀</span>
+                <h3>VOID JUMPER PRO</h3>
             </div>
-            <div class="card" style="opacity:0.3"><h3>WIP</h3></div>
-            <div class="card" style="opacity:0.3"><h3>WIP</h3></div>
-            <div class="card" style="opacity:0.3"><h3>WIP</h3></div>
+            <div class="card" style="opacity: 0.3;"><h3>EN CONSTRUCTION</h3></div>
+            <div class="card" style="opacity: 0.3;"><h3>EN CONSTRUCTION</h3></div>
+            <div class="card" style="opacity: 0.3;"><h3>EN CONSTRUCTION</h3></div>
         </div>
+
         <canvas id="gameCanvas"></canvas>
     </div>
 
     <div id="side-chat">
         <div class="chat-tabs">
-            <div class="tab active" id="t-pub" onclick="setChat('public')">PUBLIC</div>
-            <div class="tab" id="t-priv" onclick="setChat('private')">PRIVÉ</div>
+            <div class="tab active" id="t-pub" onclick="switchChat('public')">PUBLIC</div>
+            <div class="tab" id="t-priv" onclick="switchChat('private')">PRIVE</div>
         </div>
-        <div id="chat-msgs"></div>
+        <div id="chat-msgs"><div class="msg"><b>[SYS]</b> Welcome to the Nexus.</div></div>
         <div class="chat-ctrl">
-            <input type="text" id="session-code" placeholder="CODE SESSION" style="display:none; margin-bottom:5px; border-color:var(--pink);">
-            <input type="text" id="chat-in" placeholder="Message...">
+            <input type="text" id="session-code" placeholder="CODE SESSION" style="display:none; margin-bottom: 5px; border-color: var(--pink);">
+            <input type="text" id="chat-in" placeholder="Envoyer un message...">
         </div>
     </div>
 </div>
@@ -57,107 +72,151 @@
 <script>
     // --- CHAT LOGIC ---
     let chatMode = 'public';
-    function setChat(m) {
+    const chatInput = document.getElementById('chat-in');
+    const chatMsgs = document.getElementById('chat-msgs');
+    const sessionInput = document.getElementById('session-code');
+
+    function switchChat(m) {
         chatMode = m;
         document.getElementById('t-pub').className = m === 'public' ? 'tab active' : 'tab';
         document.getElementById('t-priv').className = m === 'private' ? 'tab active' : 'tab';
-        document.getElementById('session-code').style.display = m === 'private' ? 'block' : 'none';
+        sessionInput.style.display = m === 'private' ? 'block' : 'none';
     }
 
-    // --- GAME LOGIC ---
+    chatInput.onkeydown = (e) => {
+        if(e.key === 'Enter' && chatInput.value !== "") {
+            let label = chatMode === 'private' ? `[PRIVÉ:${sessionInput.value || '0000'}] Moi` : `Moi`;
+            let cls = chatMode === 'private' ? 'msg private-msg' : 'msg';
+            chatMsgs.innerHTML += `<div class="${cls}"><b>${label}:</b> ${chatInput.value}</div>`;
+            chatInput.value = "";
+            chatMsgs.scrollTop = chatMsgs.scrollHeight;
+        }
+    }
+
+    // --- VOID JUMPER PRO ENGINE ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     canvas.width = 800; canvas.height = 600;
 
     const imgP = new Image(); imgP.src = 'player.png';
     const imgB = new Image(); imgB.src = 'background.png';
-    const imgG = new Image(); imgG.src = 'goal.png'; // Optionnel
 
-    let currentLvl = 1;
-    let platforms = [];
-    let goal = {x:0, y:0, w:60, h:60};
-    const player = { x:100, y:400, w:45, h:45, vx:0, vy:0, grounded: false };
-
+    let score = 0, level = 1, gameOver = false, cameraY = 0, nextPortalY = -1500;
+    let platforms = [], hazards = [];
     const keys = {};
-    window.onkeydown = (e) => { keys[e.key.toLowerCase()] = true; if(canvas.style.display === 'block') e.preventDefault(); };
-    window.onkeyup = (e) => { keys[e.key.toLowerCase()] = false; };
 
-    function generate(lvl) {
-        platforms = [{x:0, y:550, w:800, h:50, c:'#00f2ff'}];
-        let ly = 550;
-        for(let i=0; i<7; i++) {
-            let w = 150 - (lvl * 1.5);
-            let x = Math.random()*(800-w);
-            let y = ly - 82;
-            platforms.push({x, y, w, h:20, c:`hsl(${lvl*20}, 100%, 60%)`});
-            ly = y;
+    const player = {
+        x: 400, y: 500, w: 40, h: 40,
+        vx: 0, vy: 0, grounded: false,
+        speed: 1.1, jump: -15, gravity: 0.6, friction: 0.85
+    };
+
+    function initGame() {
+        platforms = [{x: 0, y: 580, w: 800, h: 40, type: 'start'}];
+        hazards = [];
+        cameraY = 0; score = 0; level = 1; nextPortalY = -1500;
+        player.x = 400; player.y = 500; player.vx = 0; player.vy = 0;
+        for(let i=1; i<15; i++) spawnPlatform(-i * 110);
+        gameOver = false;
+    }
+
+    function spawnPlatform(yPos) {
+        let w = Math.max(80, 220 - (level * 8));
+        let x = Math.random() * (canvas.width - w);
+        platforms.push({x, y: yPos, w, h: 15});
+        if(Math.random() > 0.75) {
+            hazards.push({x: Math.random()*(canvas.width-120), y: yPos - 40, w: 120, h: 8});
         }
-        // Placement du portail au dessus de la dernière plateforme
-        let topP = platforms[platforms.length - 1];
-        goal.x = topP.x + (topP.w/2) - 30;
-        goal.y = topP.y - 110;
     }
 
     function update() {
-        if(keys['d'] || keys['arrowright']) player.vx += 0.8;
-        if(keys['q'] || keys['a'] || keys['arrowleft']) player.vx -= 0.8;
+        if(gameOver) return;
+
+        if(keys['d'] || keys['arrowright']) player.vx += player.speed;
+        if(keys['q'] || keys['a'] || keys['arrowleft']) player.vx -= player.speed;
         if((keys['z'] || keys['w'] || keys['arrowup'] || keys[' ']) && player.grounded) {
-            player.vy = -13;
-            player.grounded = false;
+            player.vy = player.jump; player.grounded = false;
         }
 
-        player.vy += 0.55;
-        player.vx *= 0.85;
+        player.vy += player.gravity;
+        player.vx *= player.friction;
         player.x += player.vx;
         player.y += player.vy;
 
-        if(player.x < 0) player.x = 0;
-        if(player.x + player.w > 800) player.x = 800 - player.w;
+        if(player.x < 0) player.x = canvas.width;
+        if(player.x > canvas.width) player.x = 0;
 
+        // Camera follow
+        if(player.y < cameraY + 250) cameraY = player.y - 250;
+
+        // Collisions
         player.grounded = false;
         platforms.forEach(p => {
-            if(player.x + player.w > p.x && player.x < p.x + p.w &&
-               player.y + player.h >= p.y && player.y + player.h <= p.y + player.vy + 10 && player.vy >= 0) {
+            if(player.vy > 0 && player.x+player.w > p.x && player.x < p.x+p.w &&
+               player.y+player.h >= p.y && player.y+player.h <= p.y + player.vy + 10) {
                 player.grounded = true; player.vy = 0; player.y = p.y - player.h;
             }
         });
 
-        // Collision Portail
-        if(player.x < goal.x + 60 && player.x + 45 > goal.x && player.y < goal.y + 60 && player.y + 45 > goal.y) {
-            currentLvl++;
-            generate(currentLvl);
-            player.x = 100; player.y = 400;
+        // Hazards (Lasers)
+        hazards.forEach(h => {
+            if(player.x < h.x + h.w && player.x + player.w > h.x && player.y < h.y + h.h && player.y + player.h > h.y) {
+                death();
+            }
+        });
+
+        // Generation infinie
+        if(platforms[platforms.length-1].y > cameraY - 150) {
+            spawnPlatform(platforms[platforms.length-1].y - 110);
+            if(platforms.length > 25) platforms.shift();
         }
-        if(player.y > 650) { player.x = 100; player.y = 400; player.vx = 0; player.vy = 0; }
+
+        // Portail (Secteur suivant)
+        if(player.y < nextPortalY) {
+            level++;
+            nextPortalY -= 2500;
+        }
+
+        if(player.y > cameraY + canvas.height) death();
+        score = Math.max(score, Math.floor(-player.y + 500));
+    }
+
+    function death() {
+        gameOver = true;
+        setTimeout(initGame, 2000);
     }
 
     function draw() {
-        if(canvas.style.display !== 'block') return;
+        if(canvas.style.display === 'none') return;
         ctx.clearRect(0,0,800,600);
-        
-        // Background
+        ctx.save();
+        ctx.translate(0, -cameraY);
+
+        // BG
         if(imgB.complete && imgB.naturalWidth > 0) {
-            ctx.drawImage(imgB, 0, 0, 800, 600);
+            ctx.drawImage(imgB, 0, cameraY, 800, 600);
         } else {
-            ctx.fillStyle = "#050510"; ctx.fillRect(0,0,800,600);
+            ctx.fillStyle = "#050510"; ctx.fillRect(0, cameraY, 800, 600);
         }
-        
-        // Plateformes
+
+        // Platforms
         platforms.forEach(p => {
-            ctx.fillStyle = p.c + "44"; ctx.strokeStyle = p.c;
-            ctx.fillRect(p.x, p.y, p.w, p.h); ctx.strokeRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = (p.type==='start') ? '#444' : `hsl(${level*40}, 80%, 50%)`;
+            ctx.fillRect(p.x, p.y, p.w, p.h);
         });
 
-        // LE PORTAIL (Affichage forcé)
-        ctx.fillStyle = "rgba(255, 255, 0, 0.2)";
-        ctx.strokeStyle = "#ffff00";
-        ctx.lineWidth = 3;
-        ctx.shadowBlur = 15; ctx.shadowColor = "#ffff00";
-        ctx.beginPath();
-        ctx.arc(goal.x + 30, goal.y + 30, 25, 0, Math.PI*2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+        // Hazards
+        hazards.forEach(h => {
+            ctx.fillStyle = "#ff0000";
+            ctx.shadowBlur = 15; ctx.shadowColor = "red";
+            ctx.fillRect(h.x, h.y, h.w, h.h);
+            ctx.shadowBlur = 0;
+        });
+
+        // PORTAL
+        ctx.strokeStyle = varColor = "cyan"; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(400, nextPortalY, 80, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = "rgba(0, 255, 255, 0.2)"; ctx.fill();
 
         // Player
         if(imgP.complete && imgP.naturalWidth > 0) {
@@ -166,16 +225,31 @@
             ctx.fillStyle = "#ff007f"; ctx.fillRect(player.x, player.y, player.w, player.h);
         }
 
+        ctx.restore();
+
+        // UI
+        ctx.fillStyle = "white"; ctx.font = "16px Orbitron";
+        ctx.fillText(`ALTITUDE: ${score}m`, 20, 40);
+        ctx.fillText(`SECTEUR: ${level}`, 20, 65);
+
+        if(gameOver) {
+            ctx.fillStyle = "rgba(255,0,0,0.7)"; ctx.fillRect(0, 250, 800, 100);
+            ctx.fillStyle = "white"; ctx.font = "30px Orbitron"; ctx.fillText("CONNECTION LOST - REBOOTING", 120, 310);
+        }
+
         update();
         requestAnimationFrame(draw);
     }
+
+    window.onkeydown = (e) => { keys[e.key.toLowerCase()] = true; };
+    window.onkeyup = (e) => { keys[e.key.toLowerCase()] = false; };
 
     function launchGame() {
         document.getElementById('ui-menu').style.display = 'none';
         document.getElementById('ui-title').style.display = 'none';
         canvas.style.display = 'block';
         document.getElementById('btn-back').style.display = 'block';
-        generate(1);
+        initGame();
         draw();
     }
 </script>
