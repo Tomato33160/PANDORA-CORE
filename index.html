@@ -71,6 +71,11 @@ let cameraX = 0;
 let distance = 0;
 let gameOver = false;
 
+// gameplay tuning
+const MAX_GAP = 260; // pixels - maximum gap between platforms (keeps jumps possible)
+const MIN_GAP = 40;
+const MAX_PLATFORM_AHEAD = 2000;
+
 const player = {
     x: 120, y: H - 120, w: 48, h: 48,
     vx: 0, vy: 0, grounded: false,
@@ -92,9 +97,10 @@ function init() {
     let px = 300;
     for(let i=0;i<8;i++){
         const w = 80 + Math.random()*160;
-        const gap = 80 + Math.random()*160;
-        platforms.push({x: px, y: H-120 - Math.random()*120, w: w, h: 16});
-        if(Math.random() > 0.7) obstacles.push({x: px + w/2 + 20, y: H-120 - Math.random()*80 - 20, w: 24, h:24});
+        const gap = Math.min(MAX_GAP, MIN_GAP + Math.random()*200);
+        const py = H-120 - Math.random()*120;
+        platforms.push({x: px, y: py, w: w, h: 16});
+        if(Math.random() > 0.55) addRandomObstacle(px, w, py);
         px += w + gap;
     }
 }
@@ -102,14 +108,39 @@ function init() {
 function spawnAhead() {
     // ensure platforms ahead up to cameraX + 2000
     let maxX = Math.max(...platforms.map(p=>p.x+p.w));
-    while(maxX < cameraX + 2000) {
+    while(maxX < cameraX + MAX_PLATFORM_AHEAD) {
         const w = 80 + Math.random()*200;
-        const gap = 60 + Math.random()*180;
+        const gap = Math.min(MAX_GAP, MIN_GAP + Math.random()*220);
         const y = H - 120 - Math.random()*160;
         const nx = maxX + gap;
         platforms.push({x:nx, y:y, w:w, h:16});
-        if(Math.random() > 0.65) obstacles.push({x: nx + w/2 + 20, y: y - 24, w: 24, h:24});
+        if(Math.random() > 0.5) addRandomObstacle(nx, w, y);
         maxX = nx + w;
+    }
+}
+
+function addRandomObstacle(platformX, platformW, platformY) {
+    // place obstacles relative to a platform
+    const types = ['spike','saw','drone','laser','falling'];
+    const t = types[Math.floor(Math.random()*types.length)];
+    const baseX = platformX + Math.random() * platformW;
+    const baseY = platformY - 24;
+    switch(t) {
+        case 'spike':
+            obstacles.push({type:'spike', x: baseX, y: baseY+8, w: 28, h: 16});
+            break;
+        case 'saw':
+            obstacles.push({type:'saw', x: baseX, y: baseY - 6, r: 14, ang: 0, vx: 0, vy: 0});
+            break;
+        case 'drone':
+            obstacles.push({type:'drone', x: baseX, y: baseY - 40, w: 36, h: 20, amp: 20 + Math.random()*40, phase: Math.random()*Math.PI*2, speed: 0.02 + Math.random()*0.04});
+            break;
+        case 'laser':
+            obstacles.push({type:'laser', x: baseX, y: baseY - 80, w: 6, h: 80, on: Math.random()>0.5, timer: Math.random()*120});
+            break;
+        case 'falling':
+            obstacles.push({type:'falling', x: baseX, y: baseY - 200, w: 26, h: 26, vy:0, triggered:false});
+            break;
     }
 }
 
@@ -147,10 +178,33 @@ function update() {
         }
     }
 
-    // Obstacles collision
+    // Obstacles behavior & collision
     for(const o of obstacles) {
-        if(player.x + player.w > o.x && player.x < o.x + o.w && player.y + player.h > o.y && player.y < o.y + o.h) {
-            die();
+        if(o.type === 'saw') {
+            o.ang += 0.25;
+        } else if(o.type === 'drone') {
+            o.phase += o.speed;
+            o.y = (o.y) + Math.sin(o.phase) * 0.5; // small bobbing
+        } else if(o.type === 'laser') {
+            o.timer = (o.timer + 1) % 180;
+            o.on = o.timer < 90;
+        } else if(o.type === 'falling') {
+            if(!o.triggered && player.x > o.x - 120 && player.x < o.x + 120) o.triggered = true;
+            if(o.triggered) o.vy += 0.8, o.y += o.vy;
+        }
+
+        // generic AABB collision checks depending on type
+        if(o.type === 'saw') {
+            const sx = o.x - o.r, sy = o.y - o.r, sw = o.r*2, sh = o.r*2;
+            if(aabbCollision(player.x, player.y, player.w, player.h, sx, sy, sw, sh)) die();
+        } else if(o.type === 'drone') {
+            if(aabbCollision(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)) die();
+        } else if(o.type === 'spike' || o.type === 'falling') {
+            if(aabbCollision(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)) die();
+        } else if(o.type === 'laser') {
+            if(o.on) {
+                if(aabbCollision(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)) die();
+            }
         }
     }
 
@@ -172,6 +226,10 @@ function die() {
     gameOver = true;
     document.getElementById('status-text').innerText = 'GAME OVER — distance: ' + Math.floor(distance) + 'm';
     setTimeout(()=>{ init(); document.getElementById('status-text').innerText = 'PRÊT'; gameOver = false; }, 1500);
+}
+
+function aabbCollision(x1,y1,w1,h1, x2,y2,w2,h2){
+    return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
 }
 
 function draw() {
@@ -197,9 +255,28 @@ function draw() {
         ctx.strokeStyle = '#333'; ctx.strokeRect(p.x, p.y, p.w, p.h);
     }
 
-    // obstacles
+    // obstacles rendering
     for(const o of obstacles) {
-        ctx.fillStyle = '#ff0044'; ctx.fillRect(o.x, o.y, o.w, o.h);
+        if(o.type === 'spike') {
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath(); ctx.moveTo(o.x, o.y+o.h); ctx.lineTo(o.x+o.w/2, o.y); ctx.lineTo(o.x+o.w, o.y+o.h); ctx.closePath(); ctx.fill();
+        } else if(o.type === 'saw') {
+            ctx.save(); ctx.translate(o.x, o.y);
+            ctx.rotate(o.ang);
+            ctx.fillStyle = '#bbbbbb'; ctx.beginPath(); ctx.arc(0,0,o.r,0,Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-o.r,0); ctx.lineTo(o.r,0); ctx.stroke();
+            ctx.restore();
+        } else if(o.type === 'drone') {
+            ctx.fillStyle = '#66ddff'; ctx.fillRect(o.x, o.y, o.w, o.h);
+            ctx.fillStyle = '#004'; ctx.fillRect(o.x+6, o.y+4, o.w-12, o.h-6);
+        } else if(o.type === 'laser') {
+            ctx.fillStyle = o.on ? 'rgba(255,30,30,0.9)' : 'rgba(255,30,30,0.25)';
+            ctx.fillRect(o.x, o.y, o.w, o.h);
+        } else if(o.type === 'falling') {
+            ctx.fillStyle = '#996633'; ctx.fillRect(o.x, o.y, o.w, o.h);
+        } else {
+            ctx.fillStyle = '#ff0044'; ctx.fillRect(o.x, o.y, o.w, o.h);
+        }
     }
 
     // player
