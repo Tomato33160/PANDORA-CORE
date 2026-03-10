@@ -1,257 +1,117 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PANDORA NEXUS // MULTIVERSE OS</title>
-    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <title>VOID JUMPER // LAB VERSION</title>
     <style>
-        :root { 
-            --accent: #00f2ff; --pink: #ff007f; --bg: #030305; 
-            --glass: rgba(15, 15, 25, 0.85); --border: rgba(0, 242, 255, 0.2);
-        }
-
-        * { box-sizing: border-box; user-select: none; }
-        body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: 'Rajdhani', sans-serif; height: 100vh; overflow: hidden; }
-
-        /* --- BACKGROUND ANIMÉ --- */
-        #starfield { position: fixed; inset: 0; z-index: -1; }
-
-        /* --- LAYOUT PRINCIPAL --- */
-        #app-interface { display: none; height: 100vh; grid-template-columns: 320px 1fr 280px; gap: 10px; padding: 10px; }
-
-        /* --- BLOCS DESIGN --- */
-        .panel { 
-            background: var(--glass); border: 1px solid var(--border); 
-            border-radius: 4px; display: flex; flex-direction: column;
-            backdrop-filter: blur(10px); position: relative;
-        }
-        .panel-header { 
-            padding: 10px; border-bottom: 1px solid var(--border); 
-            font-family: 'Orbitron'; font-size: 0.65rem; color: var(--accent);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-
-        /* --- CHAT GLOBAL --- */
-        #chat-container { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.9rem; scroll-behavior: smooth; }
-        .msg { margin-bottom: 12px; animation: slideIn 0.2s ease-out; }
-        .msg b { color: var(--accent); font-size: 0.7rem; text-transform: uppercase; display: block; margin-bottom: 2px; }
-        .msg.system { color: #aaa; font-style: italic; border-left: 2px solid #555; padding-left: 8px; }
-        .msg.admin b { color: var(--pink); }
-
-        /* --- CENTRE : MONDE 2D / AVATAR --- */
-        #world-view { position: relative; overflow: hidden; background: radial-gradient(circle, #101020 0%, #030305 100%); }
-        #canvas-render { width: 100%; height: 100%; cursor: crosshair; }
-
-        /* --- CUSTOMIZER --- */
-        .config-row { padding: 15px; border-bottom: 1px solid var(--border); }
-        .color-dot { width: 25px; height: 25px; border-radius: 50%; display: inline-block; margin-right: 8px; cursor: pointer; border: 2px solid transparent; }
-        .color-dot.active { border-color: white; transform: scale(1.2); }
-
-        /* --- ARCADE MENU --- */
-        .game-card { 
-            margin: 8px; padding: 15px; background: rgba(255,255,255,0.03); 
-            border: 1px solid var(--border); border-radius: 4px; cursor: pointer; transition: 0.2s;
-        }
-        .game-card:hover { background: var(--accent); color: black; font-weight: bold; }
-
-        /* --- LOGIN SCREEN --- */
-        #login-screen { 
-            position: fixed; inset: 0; z-index: 999; background: var(--bg);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .glitch-text { font-family: 'Orbitron'; font-size: 3rem; font-weight: 900; letter-spacing: 15px; color: var(--accent); margin-bottom: 20px; }
-        input[type="text"] { 
-            background: transparent; border: 1px solid var(--accent); color: white; 
-            padding: 15px 30px; font-family: 'Orbitron'; font-size: 1rem; text-align: center; outline: none; width: 300px;
-        }
-
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        body { margin: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { border: 2px solid #00f2ff; box-shadow: 0 0 30px rgba(0, 242, 255, 0.3); }
+        .ui { position: absolute; top: 20px; left: 20px; font-family: 'Orbitron', sans-serif; color: #00f2ff; text-shadow: 0 0 10px #00f2ff; pointer-events: none; }
     </style>
 </head>
 <body>
+    <div class="ui">MODE: EXPERIMENTAL_STATION // ALT: <span id="alt">0</span>m</div>
+    <canvas id="gameCanvas"></canvas>
 
-    <canvas id="starfield"></canvas>
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 800; canvas.height = 600;
 
-    <div id="login-screen">
-        <div class="glitch-text">PANDORA</div>
-        <div style="font-size: 0.7rem; letter-spacing: 5px; margin-bottom: 40px; opacity: 0.6;">NEURAL LINK INTERFACE v1.0</div>
-        <input type="text" id="username" placeholder="IDENTIFIANT_AGENT" maxlength="12">
-        <button onclick="initConnection()" style="margin-top:20px; background:var(--accent); border:none; padding:15px 40px; font-family:'Orbitron'; font-weight:900; cursor:pointer;">INITIALIZE</button>
-    </div>
+    // --- CHARGEMENT DES ASSETS ---
+    const imgPlayer = new Image();
+    imgPlayer.src = 'player.png';
+    const imgBg = new Image();
+    imgBg.src = 'background.png';
 
-    <div id="app-interface">
-        
-        <div class="panel">
-            <div class="panel-header"><span>// GLOBAL_CHAT</span> <span id="user-count">0 NODES</span></div>
-            <div id="chat-container"></div>
-            <div style="padding:10px; border-top: 1px solid var(--border);">
-                <input type="text" id="chat-input" placeholder="COMM_LINK..." style="width:100%; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:white; padding:10px;">
-            </div>
-        </div>
+    // --- PHYSIQUE & JOUEUR ---
+    const config = { gravity: 0.45, friction: 0.85, jumpForce: -11, speed: 0.9 };
+    const player = {
+        x: 100, y: 500, w: 50, h: 50, // Ajuste la taille selon ton image
+        vx: 0, vy: 0, grounded: false, facingRight: true
+    };
 
-        <div class="panel" id="world-view">
-            <div class="panel-header"><span>// NEURAL_REPRESENTATION</span> <span id="coords">X:0 Y:0</span></div>
-            <canvas id="canvas-render"></canvas>
-        </div>
+    const platforms = [
+        {x: 0, y: 560, w: 800, h: 40}, 
+        {x: 250, y: 440, w: 200, h: 20},
+        {x: 500, y: 320, w: 200, h: 20},
+        {x: 150, y: 220, w: 150, h: 20},
+        {x: 400, y: 100, w: 300, h: 20}
+    ];
 
-        <div class="panel">
-            <div class="panel-header"><span>// CONFIG_AVATAR</span></div>
-            <div class="config-row">
-                <div style="font-size:0.7rem; margin-bottom:10px;">AURA_COLOR</div>
-                <div id="color-picker">
-                    <div class="color-dot active" style="background:#00f2ff;" onclick="setAura('#00f2ff', this)"></div>
-                    <div class="color-dot" style="background:#ff007f;" onclick="setAura('#ff007f', this)"></div>
-                    <div class="color-dot" style="background:#bcfe00;" onclick="setAura('#bcfe00', this)"></div>
-                    <div class="color-dot" style="background:#ffaa00;" onclick="setAura('#ffaa00', this)"></div>
-                </div>
-            </div>
-            
-            <div class="panel-header" style="border-top: 1px solid var(--border);"><span>// ARCADE_MODULES</span></div>
-            <div style="flex:1; overflow-y:auto;">
-                <div class="game-card" onclick="alert('Lancement de DATA_WAR...')"><b>DATA_WAR</b><br><small>Versus 1v1</small></div>
-                <div class="game-card" onclick="alert('Lancement de GRID_RUN...')"><b>GRID_RUN</b><br><small>Solo Highscore</small></div>
-                <div class="game-card" onclick="alert('Lancement de SYNC_PULSE...')"><b>SYNC_PULSE</b><br><small>Coop Rhythm</small></div>
-            </div>
-        </div>
+    const keys = {};
+    window.onkeydown = e => keys[e.key.toLowerCase()] = true;
+    window.onkeyup = e => keys[e.key.toLowerCase()] = false;
 
-    </div>
-
-    <script>
-        // CONFIGURATION
-        const ABLY_KEY = '74iqag.i4yM6w:wdLsECtzqkLpS-lV9QVnGeilSov3MqUJAu4i7jOPBDI';
-        let ably, channel, user = { id: '', name: '', color: '#00f2ff', x: 0, y: 0 };
-        let peers = {};
-
-        // INITIALISATION MOTEUR GRAPHIQUE
-        const canvas = document.getElementById('canvas-render');
-        const ctx = canvas.getContext('2d');
-        const starCanvas = document.getElementById('starfield');
-        const starCtx = starCanvas.getContext('2d');
-
-        function resize() {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            starCanvas.width = window.innerWidth;
-            starCanvas.height = window.innerHeight;
+    function update() {
+        if (keys['d'] || keys['arrowright']) { 
+            player.vx += config.speed; 
+            player.facingRight = true;
         }
-        window.onresize = resize;
-        resize();
-
-        // CONNEXION
-        async function initConnection() {
-            const name = document.getElementById('username').value.trim();
-            if(!name) return;
-            user.name = name;
-            user.id = 'agent_' + Math.random().toString(36).substr(2, 5);
-
-            document.getElementById('login-screen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('app-interface').style.display = 'grid';
-            }, 500);
-
-            ably = new Ably.Realtime(ABLY_KEY);
-            channel = ably.channels.get('pandora-nexus-global');
-
-            // Presence : Voir qui est là
-            channel.presence.enter({ name: user.name, color: user.color });
-            channel.presence.subscribe('enter', p => addPeer(p));
-            channel.presence.subscribe('leave', p => removePeer(p));
-            channel.presence.get((err, members) => members.forEach(m => addPeer(m)));
-
-            // Messages et Actions
-            channel.subscribe('msg', m => receiveMsg(m.data));
-            channel.subscribe('move', m => { if(m.clientId !== user.id) peers[m.clientId].target = m.data; });
-
-            requestAnimationFrame(renderLoop);
+        if (keys['q'] || keys['a'] || keys['arrowleft']) { 
+            player.vx -= config.speed; 
+            player.facingRight = false;
+        }
+        if ((keys[' '] || keys['z'] || keys['arrowup']) && player.grounded) {
+            player.vy = config.jumpForce;
+            player.grounded = false;
         }
 
-        // SYSTÈME DE CHAT
-        const chatIn = document.getElementById('chat-input');
-        chatIn.onkeypress = e => {
-            if(e.key === 'Enter' && chatIn.value.trim()) {
-                channel.publish('msg', { u: user.name, m: chatIn.value, c: user.color });
-                chatIn.value = '';
+        player.vy += config.gravity;
+        player.x += player.vx;
+        player.y += player.vy;
+        player.vx *= config.friction;
+
+        // Limites et collisions
+        player.grounded = false;
+        platforms.forEach(p => {
+            if (player.x + player.w > p.x && player.x < p.x + p.w &&
+                player.y + player.h > p.y && player.y + player.h < p.y + p.vy + 10) {
+                player.grounded = true;
+                player.vy = 0;
+                player.y = p.y - player.h;
             }
-        };
+        });
 
-        function receiveMsg(d) {
-            const div = document.createElement('div');
-            div.className = 'msg' + (d.u === 'SYSTEM' ? ' system' : '');
-            div.innerHTML = `<b style="color:${d.c}">${d.u}</b>${d.m}`;
-            const container = document.getElementById('chat-container');
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+        document.getElementById('alt').innerText = Math.round(600 - player.y);
+    }
+
+    function draw() {
+        // 1. Dessiner le Background (Image)
+        if (imgBg.complete) {
+            ctx.drawImage(imgBg, 0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = '#050510'; ctx.fillRect(0,0,800,600);
         }
 
-        // LOGIQUE AVATAR & RENDU
-        function setAura(color, el) {
-            user.color = color;
-            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-            el.classList.add('active');
-            channel.presence.update({ name: user.name, color: user.color });
-        }
+        // 2. Dessiner les plateformes (effet néon)
+        ctx.fillStyle = "rgba(0, 242, 255, 0.2)";
+        ctx.strokeStyle = "#00f2ff";
+        ctx.lineWidth = 2;
+        platforms.forEach(p => {
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.strokeRect(p.x, p.y, p.w, p.h);
+        });
 
-        function addPeer(p) {
-            if(p.clientId === user.id) return;
-            peers[p.clientId] = { name: p.data.name, color: p.data.color, x: Math.random()*canvas.width, y: Math.random()*canvas.height };
-            receiveMsg({ u: 'SYSTEM', m: `${p.data.name} s'est synchronisé.`, c: '#aaa' });
-        }
-
-        function removePeer(p) {
-            delete peers[p.clientId];
-            receiveMsg({ u: 'SYSTEM', m: `${p.data.name} a quitté le flux.`, c: '#aaa' });
-        }
-
-        function renderLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Dessiner les autres agents
-            for(let id in peers) {
-                let p = peers[id];
-                drawAvatar(p.x, p.y, p.color, p.name);
+        // 3. Dessiner le Joueur (Image)
+        if (imgPlayer.complete) {
+            ctx.save();
+            // Petit effet de miroir si on va à gauche
+            if (!player.facingRight) {
+                ctx.translate(player.x + player.w, player.y);
+                ctx.scale(-1, 1);
+                ctx.drawImage(imgPlayer, 0, 0, player.w, player.h);
+            } else {
+                ctx.drawImage(imgPlayer, player.x, player.y, player.w, player.h);
             }
-
-            // Dessiner mon agent (suit la souris pour le test)
-            canvas.onmousemove = e => {
-                user.x = e.offsetX; user.y = e.offsetY;
-                document.getElementById('coords').innerText = `X:${Math.round(user.x)} Y:${Math.round(user.y)}`;
-            };
-            drawAvatar(user.x, user.y, user.color, user.name + " (YOU)");
-
-            requestAnimationFrame(renderLoop);
+            ctx.restore();
+        } else {
+            ctx.fillStyle = "#ff007f"; ctx.fillRect(player.x, player.y, player.w, player.h);
         }
 
-        function drawAvatar(x, y, color, name) {
-            ctx.shadowBlur = 15; ctx.shadowColor = color;
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(x, y, 8, 0, Math.PI*2);
-            ctx.fill();
-            
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = "white";
-            ctx.font = "10px Orbitron";
-            ctx.textAlign = "center";
-            ctx.fillText(name, x, y - 15);
-        }
+        requestAnimationFrame(() => { update(); draw(); });
+    }
 
-        // ANIMATION FOND D'ÉTOILES
-        let stars = Array(150).fill().map(() => ({ x: Math.random()*2000, y: Math.random()*2000, s: Math.random()*2 }));
-        function drawStars() {
-            starCtx.fillStyle = '#030305';
-            starCtx.fillRect(0,0,starCanvas.width, starCanvas.height);
-            starCtx.fillStyle = 'white';
-            stars.forEach(s => {
-                s.y -= s.s * 0.5; if(s.y < 0) s.y = starCanvas.height;
-                starCtx.globalAlpha = s.s / 2;
-                starCtx.fillRect(s.x % starCanvas.width, s.y, s.s, s.s);
-            });
-            requestAnimationFrame(drawStars);
-        }
-        drawStars();
-    </script>
+    draw();
+</script>
 </body>
 </html>
