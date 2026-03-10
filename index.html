@@ -2,256 +2,237 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>PANDORA MULTIVERSE // INF-ASCENSION</title>
+    <title>PANDORA MULTIVERSE // HORIZONTAL RUNNER</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
         :root { --neon: #00f2ff; --pink: #ff007f; --bg: #050508; }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: #fff; font-family: 'Share Tech Mono', monospace; overflow: hidden; }
+        * { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: #fff; font-family: 'Share Tech Mono', monospace; }
 
-        .main-container { display: grid; grid-template-columns: 1fr 350px; height: 100vh; }
+        .main { display: grid; grid-template-columns: 1fr 320px; height: 100vh; }
+        #viewport { position: relative; overflow: hidden; border-right: 1px solid #222; display:flex; align-items:center; justify-content:center; }
+        canvas { background: transparent; display: none; border-left: 6px solid #080810; }
 
-        /* ZONE CENTRALE */
-        #viewport { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid #222; overflow: hidden; }
-        canvas { background: #000; border: 2px solid var(--neon); display: none; }
-        
-        #ui-title { font-family: 'Orbitron'; font-weight: 900; letter-spacing: 5px; margin-bottom: 30px; }
-        .game-grid { display: grid; grid-template-columns: repeat(2, 200px); gap: 20px; }
-        .card { width: 200px; height: 120px; background: #0a0a0f; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
-        .card:hover { border-color: var(--neon); box-shadow: 0 0 15px var(--neon); transform: scale(1.05); }
-        .card h3 { font-family: 'Orbitron'; font-size: 0.7rem; margin-top: 10px; }
+        #ui { text-align:center; }
+        #ui-title { font-family: 'Orbitron'; letter-spacing: 6px; margin-bottom: 20px; }
+        .menu { display:flex; gap:12px; justify-content:center; }
+        .btn { padding:18px 28px; background:#0a0a0f; border:1px solid #222; cursor:pointer; }
 
-        /* CHAT LATÉRAL */
-        #side-chat { display: flex; flex-direction: column; background: #08080c; border-left: 1px solid #222; }
-        .chat-tabs { display: flex; border-bottom: 1px solid #222; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-family: 'Orbitron'; font-size: 0.7rem; opacity: 0.5; }
-        .tab.active { opacity: 1; color: var(--neon); border-bottom: 2px solid var(--neon); background: #10101a; }
-        #chat-msgs { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.8rem; }
-        .msg { margin-bottom: 8px; border-bottom: 1px solid #151515; padding-bottom: 4px; }
-        .msg b { color: var(--neon); }
-        .private-msg { color: var(--pink); font-style: italic; }
+        #side { background:#08080c; display:flex; flex-direction:column; }
+        #info { padding:18px; border-bottom:1px solid #222; }
+        #controls { padding:12px; font-size:0.9rem; color:#cfcfcf; }
 
-        .chat-ctrl { padding: 15px; border-top: 1px solid #222; background: #050508; }
-        input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 10px; font-family: 'Share Tech Mono'; outline: none; box-sizing: border-box; }
-        
-        #btn-back { display: none; position: absolute; top: 20px; left: 20px; color: var(--pink); cursor: pointer; z-index: 100; font-family: 'Orbitron'; font-size: 0.8rem; }
+        #btn-back { display: none; position: absolute; top: 18px; left: 18px; color: var(--pink); cursor: pointer; z-index: 100; font-family: 'Orbitron'; }
     </style>
 </head>
 <body>
 
-<div class="main-container">
+<div class="main">
     <div id="viewport">
         <div id="btn-back" onclick="location.reload()">[ QUITTER ]</div>
-        <h1 id="ui-title">PANDORA <span style="color:var(--neon)">MULTIVERSE</span></h1>
-        
-        <div class="game-grid" id="ui-menu">
-            <div class="card" onclick="launchGame()">
-                <span style="font-size: 2rem;">🚀</span>
-                <h3>VOID JUMPER PRO</h3>
+
+        <div id="ui">
+            <h1 id="ui-title">PANDORA <span style="color:var(--neon)">RUNNER</span></h1>
+            <div class="menu" id="ui-menu">
+                <div class="btn" onclick="launchGame()">Lancer RUNNER</div>
+                <div class="btn" style="opacity:0.4">Options</div>
             </div>
-            <div class="card" style="opacity: 0.3;"><h3>EN CONSTRUCTION</h3></div>
-            <div class="card" style="opacity: 0.3;"><h3>EN CONSTRUCTION</h3></div>
-            <div class="card" style="opacity: 0.3;"><h3>EN CONSTRUCTION</h3></div>
         </div>
 
-        <canvas id="gameCanvas"></canvas>
+        <canvas id="gameCanvas" width="900" height="500"></canvas>
     </div>
 
-    <div id="side-chat">
-        <div class="chat-tabs">
-            <div class="tab active" id="t-pub" onclick="switchChat('public')">PUBLIC</div>
-            <div class="tab" id="t-priv" onclick="switchChat('private')">PRIVE</div>
+    <div id="side">
+        <div id="info">
+            <h3 style="margin:0; font-family:Orbitron">STATUS</h3>
+            <div id="status-text">PRÊT</div>
         </div>
-        <div id="chat-msgs"><div class="msg"><b>[SYS]</b> Welcome to the Nexus.</div></div>
-        <div class="chat-ctrl">
-            <input type="text" id="session-code" placeholder="CODE SESSION" style="display:none; margin-bottom: 5px; border-color: var(--pink);">
-            <input type="text" id="chat-in" placeholder="Envoyer un message...">
+        <div id="controls">
+            Contrôles: Flèches / A,D pour courir, Espace / Z pour sauter
+            <br><br>
+            Objectif: parcourir la plus grande distance possible — génération infinie horizontale.
         </div>
     </div>
 </div>
 
 <script>
-    // --- CHAT LOGIC ---
-    let chatMode = 'public';
-    const chatInput = document.getElementById('chat-in');
-    const chatMsgs = document.getElementById('chat-msgs');
-    const sessionInput = document.getElementById('session-code');
+// Simple horizontal infinite platformer
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
 
-    function switchChat(m) {
-        chatMode = m;
-        document.getElementById('t-pub').className = m === 'public' ? 'tab active' : 'tab';
-        document.getElementById('t-priv').className = m === 'private' ? 'tab active' : 'tab';
-        sessionInput.style.display = m === 'private' ? 'block' : 'none';
+// Assets (PNGs existants)
+const imgPlayer = new Image(); imgPlayer.src = 'player.png';
+const imgBack = new Image(); imgBack.src = 'background.png';
+
+// Game state
+let cameraX = 0;
+let distance = 0;
+let gameOver = false;
+
+const player = {
+    x: 120, y: H - 120, w: 48, h: 48,
+    vx: 0, vy: 0, grounded: false,
+    speed: 0.45, runSpeed: 4.5, jump: -12, gravity: 0.6
+};
+
+let platforms = [];
+let obstacles = [];
+const keys = {};
+
+function init() {
+    cameraX = 0; distance = 0; gameOver = false;
+    player.x = 120; player.y = H - 120; player.vx = 0; player.vy = 0; player.grounded = false;
+    platforms = [];
+    obstacles = [];
+    // ground
+    platforms.push({x: -1000, y: H-60, w: 3000, h: 60});
+    // initial platforms
+    let px = 300;
+    for(let i=0;i<8;i++){
+        const w = 80 + Math.random()*160;
+        const gap = 80 + Math.random()*160;
+        platforms.push({x: px, y: H-120 - Math.random()*120, w: w, h: 16});
+        if(Math.random() > 0.7) obstacles.push({x: px + w/2 + 20, y: H-120 - Math.random()*80 - 20, w: 24, h:24});
+        px += w + gap;
     }
+}
 
-    chatInput.onkeydown = (e) => {
-        if(e.key === 'Enter' && chatInput.value !== "") {
-            let label = chatMode === 'private' ? `[PRIVÉ:${sessionInput.value || '0000'}] Moi` : `Moi`;
-            let cls = chatMode === 'private' ? 'msg private-msg' : 'msg';
-            chatMsgs.innerHTML += `<div class="${cls}"><b>${label}:</b> ${chatInput.value}</div>`;
-            chatInput.value = "";
-            chatMsgs.scrollTop = chatMsgs.scrollHeight;
-        }
+function spawnAhead() {
+    // ensure platforms ahead up to cameraX + 2000
+    let maxX = Math.max(...platforms.map(p=>p.x+p.w));
+    while(maxX < cameraX + 2000) {
+        const w = 80 + Math.random()*200;
+        const gap = 60 + Math.random()*180;
+        const y = H - 120 - Math.random()*160;
+        const nx = maxX + gap;
+        platforms.push({x:nx, y:y, w:w, h:16});
+        if(Math.random() > 0.65) obstacles.push({x: nx + w/2 + 20, y: y - 24, w: 24, h:24});
+        maxX = nx + w;
     }
+}
 
-    // --- VOID JUMPER PRO ENGINE ---
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 800; canvas.height = 600;
+function update() {
+    if(gameOver) return;
 
-    const imgP = new Image(); imgP.src = 'player.png';
-    const imgB = new Image(); imgB.src = 'background.png';
+    const left = keys['a'] || keys['arrowleft'];
+    const right = keys['d'] || keys['arrowright'];
+    const jump = keys[' '] || keys['z'] || keys['arrowup'];
 
-    let score = 0, level = 1, gameOver = false, cameraY = 0, nextPortalY = -1500;
-    let platforms = [], hazards = [];
-    const keys = {};
+    // Horizontal movement (player tries to run to the right automatically slowly)
+    if(right) player.vx += player.speed;
+    if(left) player.vx -= player.speed;
+    // apply friction
+    player.vx *= 0.92;
 
-    const player = {
-        x: 400, y: 500, w: 40, h: 40,
-        vx: 0, vy: 0, grounded: false,
-        speed: 1.1, jump: -15, gravity: 0.6, friction: 0.85
-    };
+    // Jump
+    if(jump && player.grounded) { player.vy = player.jump; player.grounded = false; }
 
-    function initGame() {
-        platforms = [{x: 0, y: 580, w: 800, h: 40, type: 'start'}];
-        hazards = [];
-        cameraY = 0; score = 0; level = 1; nextPortalY = -1500;
-        player.x = 400; player.y = 500; player.vx = 0; player.vy = 0;
-        for(let i=1; i<15; i++) spawnPlatform(-i * 110);
-        gameOver = false;
-    }
+    player.vy += player.gravity;
+    player.x += player.vx;
+    player.y += player.vy;
 
-    function spawnPlatform(yPos) {
-        let w = Math.max(80, 220 - (level * 8));
-        let x = Math.random() * (canvas.width - w);
-        platforms.push({x, y: yPos, w, h: 15});
-        if(Math.random() > 0.75) {
-            hazards.push({x: Math.random()*(canvas.width-120), y: yPos - 40, w: 120, h: 8});
-        }
-    }
+    // Camera follows to the right based on distance
+    const center = player.x - 200;
+    if(center > cameraX) cameraX = center;
 
-    function update() {
-        if(gameOver) return;
-
-        if(keys['d'] || keys['arrowright']) player.vx += player.speed;
-        if(keys['q'] || keys['a'] || keys['arrowleft']) player.vx -= player.speed;
-        if((keys['z'] || keys['w'] || keys['arrowup'] || keys[' ']) && player.grounded) {
-            player.vy = player.jump; player.grounded = false;
-        }
-
-        player.vy += player.gravity;
-        player.vx *= player.friction;
-        player.x += player.vx;
-        player.y += player.vy;
-
-        if(player.x < 0) player.x = canvas.width;
-        if(player.x > canvas.width) player.x = 0;
-
-        // Camera follow
-        if(player.y < cameraY + 250) cameraY = player.y - 250;
-
-        // Collisions
-        player.grounded = false;
-        platforms.forEach(p => {
-            if(player.vy > 0 && player.x+player.w > p.x && player.x < p.x+p.w &&
-               player.y+player.h >= p.y && player.y+player.h <= p.y + player.vy + 10) {
+    // Collisions with platforms
+    player.grounded = false;
+    for(const p of platforms) {
+        if(player.vy >= 0 && player.x + player.w > p.x && player.x < p.x + p.w) {
+            if(player.y + player.h >= p.y && player.y + player.h <= p.y + player.vy + 12) {
                 player.grounded = true; player.vy = 0; player.y = p.y - player.h;
             }
-        });
-
-        // Hazards (Lasers)
-        hazards.forEach(h => {
-            if(player.x < h.x + h.w && player.x + player.w > h.x && player.y < h.y + h.h && player.y + player.h > h.y) {
-                death();
-            }
-        });
-
-        // Generation infinie
-        if(platforms[platforms.length-1].y > cameraY - 150) {
-            spawnPlatform(platforms[platforms.length-1].y - 110);
-            if(platforms.length > 25) platforms.shift();
         }
-
-        // Portail (Secteur suivant)
-        if(player.y < nextPortalY) {
-            level++;
-            nextPortalY -= 2500;
-        }
-
-        if(player.y > cameraY + canvas.height) death();
-        score = Math.max(score, Math.floor(-player.y + 500));
     }
 
-    function death() {
-        gameOver = true;
-        setTimeout(initGame, 2000);
+    // Obstacles collision
+    for(const o of obstacles) {
+        if(player.x + player.w > o.x && player.x < o.x + o.w && player.y + player.h > o.y && player.y < o.y + o.h) {
+            die();
+        }
     }
 
-    function draw() {
-        if(canvas.style.display === 'none') return;
-        ctx.clearRect(0,0,800,600);
-        ctx.save();
-        ctx.translate(0, -cameraY);
+    // Remove old platforms and obstacles behind
+    platforms = platforms.filter(p => p.x + p.w > cameraX - 500);
+    obstacles = obstacles.filter(o => o.x + o.w > cameraX - 500);
 
-        // BG
-        if(imgB.complete && imgB.naturalWidth > 0) {
-            ctx.drawImage(imgB, 0, cameraY, 800, 600);
-        } else {
-            ctx.fillStyle = "#050510"; ctx.fillRect(0, cameraY, 800, 600);
-        }
+    // spawn new
+    spawnAhead();
 
-        // Platforms
-        platforms.forEach(p => {
-            ctx.fillStyle = (p.type==='start') ? '#444' : `hsl(${level*40}, 80%, 50%)`;
-            ctx.fillRect(p.x, p.y, p.w, p.h);
-        });
+    // update distance
+    distance = Math.max(distance, Math.floor(cameraX));
 
-        // Hazards
-        hazards.forEach(h => {
-            ctx.fillStyle = "#ff0000";
-            ctx.shadowBlur = 15; ctx.shadowColor = "red";
-            ctx.fillRect(h.x, h.y, h.w, h.h);
-            ctx.shadowBlur = 0;
-        });
+    // falling check
+    if(player.y > H + 200) die();
+}
 
-        // PORTAL
-        ctx.strokeStyle = varColor = "cyan"; ctx.lineWidth = 5;
-        ctx.beginPath(); ctx.arc(400, nextPortalY, 80, 0, Math.PI*2); ctx.stroke();
-        ctx.fillStyle = "rgba(0, 255, 255, 0.2)"; ctx.fill();
+function die() {
+    gameOver = true;
+    document.getElementById('status-text').innerText = 'GAME OVER — distance: ' + Math.floor(distance) + 'm';
+    setTimeout(()=>{ init(); document.getElementById('status-text').innerText = 'PRÊT'; gameOver = false; }, 1500);
+}
 
-        // Player
-        if(imgP.complete && imgP.naturalWidth > 0) {
-            ctx.drawImage(imgP, player.x, player.y, player.w, player.h);
-        } else {
-            ctx.fillStyle = "#ff007f"; ctx.fillRect(player.x, player.y, player.w, player.h);
-        }
+function draw() {
+    if(canvas.style.display === 'none') return;
+    ctx.clearRect(0,0,W,H);
 
-        ctx.restore();
-
-        // UI
-        ctx.fillStyle = "white"; ctx.font = "16px Orbitron";
-        ctx.fillText(`ALTITUDE: ${score}m`, 20, 40);
-        ctx.fillText(`SECTEUR: ${level}`, 20, 65);
-
-        if(gameOver) {
-            ctx.fillStyle = "rgba(255,0,0,0.7)"; ctx.fillRect(0, 250, 800, 100);
-            ctx.fillStyle = "white"; ctx.font = "30px Orbitron"; ctx.fillText("CONNECTION LOST - REBOOTING", 120, 310);
-        }
-
-        update();
-        requestAnimationFrame(draw);
+    // background
+    if(imgBack.complete && imgBack.naturalWidth>0) {
+        // tile background
+        const sx = Math.floor(cameraX/4) % 1200;
+        for(let i=-2;i<4;i++) ctx.drawImage(imgBack, -sx + i*1200, 0, 1200, H);
+    } else {
+        ctx.fillStyle = '#081018'; ctx.fillRect(0,0,W,H);
     }
 
-    window.onkeydown = (e) => { keys[e.key.toLowerCase()] = true; };
-    window.onkeyup = (e) => { keys[e.key.toLowerCase()] = false; };
+    ctx.save();
+    ctx.translate(-cameraX, 0);
 
-    function launchGame() {
-        document.getElementById('ui-menu').style.display = 'none';
-        document.getElementById('ui-title').style.display = 'none';
-        canvas.style.display = 'block';
-        document.getElementById('btn-back').style.display = 'block';
-        initGame();
-        draw();
+    // platforms
+    for(const p of platforms) {
+        ctx.fillStyle = '#222';
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        ctx.strokeStyle = '#333'; ctx.strokeRect(p.x, p.y, p.w, p.h);
     }
+
+    // obstacles
+    for(const o of obstacles) {
+        ctx.fillStyle = '#ff0044'; ctx.fillRect(o.x, o.y, o.w, o.h);
+    }
+
+    // player
+    if(imgPlayer.complete && imgPlayer.naturalWidth>0) {
+        ctx.drawImage(imgPlayer, player.x, player.y, player.w, player.h);
+    } else {
+        ctx.fillStyle = '#ff007f'; ctx.fillRect(player.x, player.y, player.w, player.h);
+    }
+
+    ctx.restore();
+
+    // HUD
+    ctx.fillStyle = 'white'; ctx.font = '18px Share Tech Mono';
+    ctx.fillText('DISTANCE: ' + Math.floor(distance) + 'm', 16, 28);
+
+    update();
+    requestAnimationFrame(draw);
+}
+
+window.addEventListener('keydown', (e)=>{ keys[e.key.toLowerCase()] = true; });
+window.addEventListener('keyup', (e)=>{ keys[e.key.toLowerCase()] = false; });
+
+function launchGame(){
+    document.getElementById('ui-menu').style.display = 'none';
+    document.getElementById('ui-title').style.display = 'none';
+    canvas.style.display = 'block';
+    document.getElementById('btn-back').style.display = 'block';
+    init(); draw();
+}
+
+// expose init for hot-reload during development
+window.__initGame = init;
 </script>
+
 </body>
 </html>
