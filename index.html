@@ -1,15 +1,28 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-    <title>VOID JUMPER // LAB VERSION</title>
+    <meta charset="UTF-8">
+    <title>PANDORA // VOID JUMPER : 50 SECTORS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        canvas { border: 2px solid #00f2ff; box-shadow: 0 0 30px rgba(0, 242, 255, 0.3); }
-        .ui { position: absolute; top: 20px; left: 20px; font-family: 'Orbitron', sans-serif; color: #00f2ff; text-shadow: 0 0 10px #00f2ff; pointer-events: none; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Orbitron', sans-serif; }
+        canvas { display: block; margin: auto; border-left: 2px solid #00f2ff; border-right: 2px solid #00f2ff; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #00f2ff; pointer-events: none; text-shadow: 0 0 10px #00f2ff; }
+        .lvl-card { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); border: 1px solid #00f2ff; padding: 20px; text-align: center; display: none; }
     </style>
 </head>
 <body>
-    <div class="ui">MODE: EXPERIMENTAL_STATION // ALT: <span id="alt">0</span>m</div>
+
+    <div id="ui">
+        <div>SECTEUR: <span id="sector-val">1</span> / 50</div>
+        <div style="font-size: 0.8rem; opacity: 0.7;">GRAVITY: LOW_ALT</div>
+    </div>
+
+    <div id="lvl-card" class="lvl-card">
+        <h1 id="lvl-title" style="color:#00f2ff; margin:0;">SECTEUR 1 ALPHA</h1>
+        <p style="color:white; font-size:0.8rem;">TRANSMISSION EN COURS...</p>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
 
 <script>
@@ -17,107 +30,147 @@
     const ctx = canvas.getContext('2d');
     canvas.width = 800; canvas.height = 600;
 
-    // --- CHARGEMENT DES ASSETS ---
-    const imgPlayer = new Image();
-    imgPlayer.src = 'player.png';
-    const imgBg = new Image();
-    imgBg.src = 'background.png';
+    // --- ASSETS ---
+    const imgPlayer = new Image(); imgPlayer.src = 'player.png';
+    const imgBg = new Image(); imgBg.src = 'background.png';
+    const imgGoal = new Image(); imgGoal.src = 'goal.png';
 
-    // --- PHYSIQUE & JOUEUR ---
-    const config = { gravity: 0.45, friction: 0.85, jumpForce: -11, speed: 0.9 };
+    // --- ETAT DU JEU ---
+    let currentSector = 1;
+    let platforms = [];
+    let goal = { x: 0, y: 0, w: 60, h: 60 };
+    
     const player = {
-        x: 100, y: 500, w: 50, h: 50, // Ajuste la taille selon ton image
-        vx: 0, vy: 0, grounded: false, facingRight: true
+        x: 100, y: 500, w: 45, h: 45,
+        vx: 0, vy: 0, grounded: false, speed: 0.8, jump: -11, friction: 0.85, gravity: 0.45
     };
-
-    const platforms = [
-        {x: 0, y: 560, w: 800, h: 40}, 
-        {x: 250, y: 440, w: 200, h: 20},
-        {x: 500, y: 320, w: 200, h: 20},
-        {x: 150, y: 220, w: 150, h: 20},
-        {x: 400, y: 100, w: 300, h: 20}
-    ];
 
     const keys = {};
     window.onkeydown = e => keys[e.key.toLowerCase()] = true;
     window.onkeyup = e => keys[e.key.toLowerCase()] = false;
 
+    // --- GÉNÉRATEUR DE NIVEAUX (L'ARCHITECTE) ---
+    function generateSector(index) {
+        platforms = [];
+        // Sol de base
+        platforms.push({ x: 0, y: 560, w: 800, h: 40, color: '#00f2ff' });
+
+        let jumpHeight = Math.abs(player.jump) * 15;
+        let lastY = 560;
+        let difficulty = index * 2; // Les plateformes rétrécissent avec le temps
+
+        // Générer entre 6 et 10 plateformes par niveau
+        for(let i = 0; i < 8; i++) {
+            let w = Math.max(60, 200 - difficulty);
+            let x = Math.random() * (canvas.width - w);
+            let y = lastY - (Math.random() * 80 + 70); // Distance sautables
+            
+            platforms.push({ x: x, y: y, w: w, h: 15, color: `hsl(${index * 7}, 100%, 50%)` });
+            lastY = y;
+        }
+
+        // Placer le portail sur la dernière plateforme
+        let lastP = platforms[platforms.length - 1];
+        goal.x = lastP.x + (lastP.w/2) - 30;
+        goal.y = lastP.y - 70;
+
+        // Message de transition
+        showTransition();
+    }
+
+    function showTransition() {
+        const card = document.getElementById('lvl-card');
+        document.getElementById('lvl-title').innerText = `SECTEUR ${currentSector}`;
+        card.style.display = 'block';
+        setTimeout(() => card.style.display = 'none', 1500);
+    }
+
+    // --- MOTEUR PHYSIQUE ---
     function update() {
-        if (keys['d'] || keys['arrowright']) { 
-            player.vx += config.speed; 
-            player.facingRight = true;
-        }
-        if (keys['q'] || keys['a'] || keys['arrowleft']) { 
-            player.vx -= config.speed; 
-            player.facingRight = false;
-        }
-        if ((keys[' '] || keys['z'] || keys['arrowup']) && player.grounded) {
-            player.vy = config.jumpForce;
+        if (keys['d'] || keys['arrowright']) player.vx += player.speed;
+        if (keys['q'] || keys['a'] || keys['arrowleft']) player.vx -= player.speed;
+        if ((keys[' '] || keys['z'] || keys['w'] || keys['arrowup']) && player.grounded) {
+            player.vy = player.jump;
             player.grounded = false;
         }
 
-        player.vy += config.gravity;
+        player.vy += player.gravity;
         player.x += player.vx;
         player.y += player.vy;
-        player.vx *= config.friction;
+        player.vx *= player.friction;
 
-        // Limites et collisions
+        // Sortie d'écran latérale
+        if (player.x < 0) player.x = canvas.width;
+        if (player.x > canvas.width) player.x = 0;
+
+        // Collisions
         player.grounded = false;
         platforms.forEach(p => {
-            // Vérification horizontale
-            if (player.x + player.w > p.x && player.x < p.x + p.w) {
-            // Vérification verticale : si le joueur tombe et franchit le seuil de la plateforme
-            if (player.vy >= 0 && 
-            player.y + player.h <= p.y + player.vy && 
-            player.y + player.h + player.vy >= p.y) {
-            
-            player.grounded = true;
-            player.vy = 0;
-            player.y = p.y - player.h;
-        }
-    }
-});
+            if (player.x + player.w > p.x && player.x < p.x + p.w &&
+                player.y + player.h > p.y && player.y + player.h < p.y + player.vy + 10 &&
+                player.vy >= 0) {
+                player.grounded = true;
+                player.vy = 0;
+                player.y = p.y - player.h;
+            }
+        });
 
-        document.getElementById('alt').innerText = Math.round(600 - player.y);
+        // Check Portail
+        if (player.x < goal.x + goal.w && player.x + player.w > goal.x &&
+            player.y < goal.y + goal.h && player.y + player.h > goal.y) {
+            currentSector++;
+            document.getElementById('sector-val').innerText = currentSector;
+            if (currentSector > 50) {
+                alert("FIN DE LA TRANSMISSION. VOUS AVEZ ATTEINT LE VIDE.");
+                currentSector = 1;
+            }
+            player.x = 100; player.y = 500; player.vx = 0; player.vy = 0;
+            generateSector(currentSector);
+        }
+
+        // Fail-safe chute
+        if (player.y > canvas.height + 100) {
+            player.x = 100; player.y = 450; player.vx = 0; player.vy = 0;
+        }
     }
 
     function draw() {
-        // 1. Dessiner le Background (Image)
-        if (imgBg.complete) {
-            ctx.drawImage(imgBg, 0, 0, canvas.width, canvas.height);
-        } else {
-            ctx.fillStyle = '#050510'; ctx.fillRect(0,0,800,600);
-        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 2. Dessiner les plateformes (effet néon)
-        ctx.fillStyle = "rgba(0, 242, 255, 0.2)";
-        ctx.strokeStyle = "#00f2ff";
-        ctx.lineWidth = 2;
+        // Background
+        if(imgBg.complete) ctx.drawImage(imgBg, 0, 0, canvas.width, canvas.height);
+
+        // Plateformes
         platforms.forEach(p => {
+            ctx.fillStyle = p.color + "33"; 
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = 3;
             ctx.fillRect(p.x, p.y, p.w, p.h);
             ctx.strokeRect(p.x, p.y, p.w, p.h);
         });
 
-        // 3. Dessiner le Joueur (Image)
-        if (imgPlayer.complete) {
-            ctx.save();
-            // Petit effet de miroir si on va à gauche
-            if (!player.facingRight) {
-                ctx.translate(player.x + player.w, player.y);
-                ctx.scale(-1, 1);
-                ctx.drawImage(imgPlayer, 0, 0, player.w, player.h);
-            } else {
-                ctx.drawImage(imgPlayer, player.x, player.y, player.w, player.h);
-            }
-            ctx.restore();
+        // Goal
+        if(imgGoal.complete) {
+            ctx.shadowBlur = 20; ctx.shadowColor = "#00f2ff";
+            ctx.drawImage(imgGoal, goal.x, goal.y, goal.w, goal.h);
+            ctx.shadowBlur = 0;
+        }
+
+        // Player
+        if(imgPlayer.complete) {
+            ctx.drawImage(imgPlayer, player.x, player.y, player.w, player.h);
         } else {
             ctx.fillStyle = "#ff007f"; ctx.fillRect(player.x, player.y, player.w, player.h);
         }
 
-        requestAnimationFrame(() => { update(); draw(); });
+        update();
+        requestAnimationFrame(draw);
     }
 
+    // Initialisation
+    generateSector(1);
     draw();
+
 </script>
 </body>
 </html>
