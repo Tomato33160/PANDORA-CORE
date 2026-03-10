@@ -2,25 +2,19 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>PANDORA // VOID JUMPER : 50 SECTORS</title>
+    <title>PANDORA // VOID JUMPER MISSION</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Orbitron', sans-serif; }
-        canvas { display: block; margin: auto; border-left: 2px solid #00f2ff; border-right: 2px solid #00f2ff; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #00f2ff; pointer-events: none; text-shadow: 0 0 10px #00f2ff; }
-        .lvl-card { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); border: 1px solid #00f2ff; padding: 20px; text-align: center; display: none; }
+        body { margin: 0; background: #020205; overflow: hidden; font-family: 'Orbitron', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { background: #000; border: 2px solid #00f2ff; box-shadow: 0 0 20px rgba(0, 242, 255, 0.4); }
+        #hud { position: absolute; top: 20px; left: 20px; color: #00f2ff; pointer-events: none; text-shadow: 0 0 10px #00f2ff; }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div>SECTEUR: <span id="sector-val">1</span> / 50</div>
-        <div style="font-size: 0.8rem; opacity: 0.7;">GRAVITY: LOW_ALT</div>
-    </div>
-
-    <div id="lvl-card" class="lvl-card">
-        <h1 id="lvl-title" style="color:#00f2ff; margin:0;">SECTEUR 1 ALPHA</h1>
-        <p style="color:white; font-size:0.8rem;">TRANSMISSION EN COURS...</p>
+    <div id="hud">
+        SECTEUR: <span id="sector-val">1</span> / 50<br>
+        <small style="opacity:0.6">Z,Q,S,D ou Flèches pour bouger</small>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -28,137 +22,83 @@
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = 800; canvas.height = 600;
+    canvas.width = 800;
+    canvas.height = 600;
 
-    // --- ASSETS ---
-    const imgPlayer = new Image(); imgPlayer.src = 'player.png';
-    const imgBg = new Image(); imgBg.src = 'background.png';
-    const imgGoal = new Image(); imgGoal.src = 'goal.png';
+    // --- CHARGEMENT SÉCURISÉ DES ASSETS ---
+    const assets = {
+        player: new Image(),
+        bg: new Image(),
+        goal: new Image()
+    };
+    assets.player.src = 'player.png';
+    assets.bg.src = 'background.png';
+    assets.goal.src = 'goal.png';
 
-    // --- ETAT DU JEU ---
+    // --- VARIABLES DE JEU ---
     let currentSector = 1;
     let platforms = [];
     let goal = { x: 0, y: 0, w: 60, h: 60 };
     
-    // --- JOUEUR STABILISÉ ---
-const player = {
-    x: 100, 
-    y: 400, // On le fait apparaître un peu plus haut pour éviter le bug du sol
-    w: 50,  // Assure-toi que c'est la taille de ton PNG
-    h: 50,
-    vx: 0, 
-    vy: 0, 
-    grounded: false, 
-    speed: 0.8, 
-    jump: -11, 
-    friction: 0.85, 
-    gravity: 0.45
-};
-
-function draw() {
-    // Nettoyage de l'écran
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 1. Background
-    if(imgBg.complete && imgBg.naturalWidth !== 0) {
-        ctx.drawImage(imgBg, 0, 0, canvas.width, canvas.height);
-    } else {
-        ctx.fillStyle = "#050510"; 
-        ctx.fillRect(0,0,canvas.width, canvas.height);
-    }
-
-    // 2. Plateformes
-    platforms.forEach(p => {
-        ctx.fillStyle = p.color + "55"; // Un peu plus opaque pour mieux voir
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = 3;
-        ctx.fillRect(p.x, p.y, p.w, p.h);
-        ctx.strokeRect(p.x, p.y, p.w, p.h);
-    });
-
-    // 3. Goal (Portail)
-    if(imgGoal.complete && imgGoal.naturalWidth !== 0) {
-        ctx.drawImage(imgGoal, goal.x, goal.y, goal.w, goal.h);
-    }
-
-    // 4. Player (Vérification de sécurité pour l'image)
-    if(imgPlayer.complete && imgPlayer.naturalWidth !== 0) {
-        ctx.drawImage(imgPlayer, player.x, player.y, player.w, player.h);
-    } else {
-        // SI L'IMAGE BUG, ON DESSINE UN CARRÉ ROSE POUR NE PAS QUE LE PERSO SOIT INVISIBLE
-        ctx.fillStyle = "#ff007f";
-        ctx.shadowBlur = 10; ctx.shadowColor = "#ff007f";
-        ctx.fillRect(player.x, player.y, player.w, player.h);
-        ctx.shadowBlur = 0;
-    }
-
-    update(); // Calcul de la physique
-    requestAnimationFrame(draw); // Boucle
-}
+    const player = {
+        x: 100, y: 400, w: 40, h: 40,
+        vx: 0, vy: 0,
+        grounded: false,
+        speed: 0.8, jump: -12, friction: 0.8, gravity: 0.5
+    };
 
     const keys = {};
     window.onkeydown = e => keys[e.key.toLowerCase()] = true;
     window.onkeyup = e => keys[e.key.toLowerCase()] = false;
 
-    // --- GÉNÉRATEUR DE NIVEAUX (L'ARCHITECTE) ---
-    function generateSector(index) {
+    // --- GÉNÉRATEUR DE NIVEAUX ---
+    function generateLevel(lvl) {
         platforms = [];
-        // Sol de base
-        platforms.push({ x: 0, y: 560, w: 800, h: 40, color: '#00f2ff' });
+        // Sol de départ
+        platforms.push({ x: 0, y: 550, w: 800, h: 50, c: '#00f2ff' });
 
-        let jumpHeight = Math.abs(player.jump) * 15;
-        let lastY = 560;
-        let difficulty = index * 2; // Les plateformes rétrécissent avec le temps
-
-        // Générer entre 6 et 10 plateformes par niveau
-        for(let i = 0; i < 8; i++) {
-            let w = Math.max(60, 200 - difficulty);
+        let lastY = 550;
+        // Création de 7 plateformes aléatoires
+        for(let i = 0; i < 7; i++) {
+            let w = Math.max(70, 180 - (lvl * 2));
             let x = Math.random() * (canvas.width - w);
-            let y = lastY - (Math.random() * 80 + 70); // Distance sautables
+            let y = lastY - 80; // Distance fixe pour être sûr de pouvoir sauter
             
-            platforms.push({ x: x, y: y, w: w, h: 15, color: `hsl(${index * 7}, 100%, 50%)` });
+            platforms.push({ x: x, y: y, w: w, h: 15, c: `hsl(${lvl * 10}, 100%, 60%)` });
             lastY = y;
         }
 
-        // Placer le portail sur la dernière plateforme
-        let lastP = platforms[platforms.length - 1];
-        goal.x = lastP.x + (lastP.w/2) - 30;
-        goal.y = lastP.y - 70;
-
-        // Message de transition
-        showTransition();
+        // Le portail est sur la plateforme la plus haute
+        let topP = platforms[platforms.length - 1];
+        goal.x = topP.x + (topP.w / 2) - 30;
+        goal.y = topP.y - 70;
     }
 
-    function showTransition() {
-        const card = document.getElementById('lvl-card');
-        document.getElementById('lvl-title').innerText = `SECTEUR ${currentSector}`;
-        card.style.display = 'block';
-        setTimeout(() => card.style.display = 'none', 1500);
-    }
-
-    // --- MOTEUR PHYSIQUE ---
+    // --- PHYSIQUE ---
     function update() {
+        // Contrôles
         if (keys['d'] || keys['arrowright']) player.vx += player.speed;
         if (keys['q'] || keys['a'] || keys['arrowleft']) player.vx -= player.speed;
-        if ((keys[' '] || keys['z'] || keys['w'] || keys['arrowup']) && player.grounded) {
+        if ((keys['z'] || keys['w'] || keys['arrowup'] || keys[' ']) && player.grounded) {
             player.vy = player.jump;
             player.grounded = false;
         }
 
+        // Application forces
         player.vy += player.gravity;
+        player.vx *= player.friction;
         player.x += player.vx;
         player.y += player.vy;
-        player.vx *= player.friction;
 
-        // Sortie d'écran latérale
-        if (player.x < 0) player.x = canvas.width;
-        if (player.x > canvas.width) player.x = 0;
+        // Limites écran
+        if (player.x < 0) player.x = 0;
+        if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
 
-        // Collisions
+        // Collisions plateformes
         player.grounded = false;
         platforms.forEach(p => {
-            if (player.x + player.w > p.x && player.x < p.x + p.w &&
-                player.y + player.h > p.y && player.y + player.h < p.y + player.vy + 10 &&
+            if (player.vx >= 0 && player.x + player.w > p.x && player.x < p.x + p.w &&
+                player.y + player.h > p.y && player.y + player.h < p.y + p.vy + 10 &&
                 player.vy >= 0) {
                 player.grounded = true;
                 player.vy = 0;
@@ -166,62 +106,70 @@ function draw() {
             }
         });
 
-        // Check Portail
+        // Check Victoire (Portail)
         if (player.x < goal.x + goal.w && player.x + player.w > goal.x &&
             player.y < goal.y + goal.h && player.y + player.h > goal.y) {
             currentSector++;
+            if(currentSector > 50) currentSector = 1;
             document.getElementById('sector-val').innerText = currentSector;
-            if (currentSector > 50) {
-                alert("FIN DE LA TRANSMISSION. VOUS AVEZ ATTEINT LE VIDE.");
-                currentSector = 1;
-            }
-            player.x = 100; player.y = 500; player.vx = 0; player.vy = 0;
-            generateSector(currentSector);
+            player.x = 100; player.y = 400; player.vx = 0; player.vy = 0;
+            generateLevel(currentSector);
         }
 
-        // Fail-safe chute
-        if (player.y > canvas.height + 100) {
-            player.x = 100; player.y = 450; player.vx = 0; player.vy = 0;
+        // Mort (Chute)
+        if (player.y > canvas.height) {
+            player.x = 100; player.y = 400; player.vx = 0; player.vy = 0;
         }
     }
 
+    // --- DESSIN ---
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Background
-        if(imgBg.complete) ctx.drawImage(imgBg, 0, 0, canvas.width, canvas.height);
+        // 1. Fond
+        if (assets.bg.complete && assets.bg.naturalWidth !== 0) {
+            ctx.drawImage(assets.bg, 0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = "#050510";
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+        }
 
-        // Plateformes
+        // 2. Plateformes
         platforms.forEach(p => {
-            ctx.fillStyle = p.color + "33"; 
-            ctx.strokeStyle = p.color;
-            ctx.lineWidth = 3;
+            ctx.fillStyle = p.c + "44";
+            ctx.strokeStyle = p.c;
+            ctx.lineWidth = 2;
             ctx.fillRect(p.x, p.y, p.w, p.h);
             ctx.strokeRect(p.x, p.y, p.w, p.h);
         });
 
-        // Goal
-        if(imgGoal.complete) {
-            ctx.shadowBlur = 20; ctx.shadowColor = "#00f2ff";
-            ctx.drawImage(imgGoal, goal.x, goal.y, goal.w, goal.h);
-            ctx.shadowBlur = 0;
+        // 3. Portail
+        if (assets.goal.complete && assets.goal.naturalWidth !== 0) {
+            ctx.drawImage(assets.goal, goal.x, goal.y, goal.w, goal.h);
+        } else {
+            ctx.strokeStyle = "#00f2ff";
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(goal.x, goal.y, goal.w, goal.h);
+            ctx.setLineDash([]);
         }
 
-        // Player
-        if(imgPlayer.complete) {
-            ctx.drawImage(imgPlayer, player.x, player.y, player.w, player.h);
+        // 4. Joueur
+        if (assets.player.complete && assets.player.naturalWidth !== 0) {
+            ctx.drawImage(assets.player, player.x, player.y, player.w, player.h);
         } else {
-            ctx.fillStyle = "#ff007f"; ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.fillStyle = "#ff007f";
+            ctx.shadowBlur = 10; ctx.shadowColor = "#ff007f";
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.shadowBlur = 0;
         }
 
         update();
         requestAnimationFrame(draw);
     }
 
-    // Initialisation
-    generateSector(1);
+    // Lancement
+    generateLevel(1);
     draw();
-
 </script>
 </body>
 </html>
