@@ -212,11 +212,11 @@ function update() {
             if(aabbCollision(player.x, player.y, player.w, player.h, sx, sy, sw, sh)) die();
             if(aabbCollision(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)) die();
         } else if(o.type === 'goomba') {
-            // stomp detection: player falling and hits top of goomba
+            // stomp detection: check feet position before this frame's vertical movement
             if(aabbCollision(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)) {
-                const feet = player.y + player.h;
-                const topOfGoomba = o.y + 8; // tolerance
-                if(player.vy > 0 && feet <= topOfGoomba) {
+                const prevFeet = (player.y + player.h) - player.vy; // feet position previous frame
+                const topOfGoomba = o.y + 6; // small tolerance
+                if(player.vy > 0 && prevFeet <= topOfGoomba) {
                     o.stomped = true;
                     player.vy = player.jump * 0.6; // small bounce
                     player.grounded = false;
