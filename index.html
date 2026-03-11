@@ -72,7 +72,7 @@ let distance = 0;
 let gameOver = false;
 
 // gameplay tuning
-const MAX_GAP = 260; // pixels - maximum gap between platforms (keeps jumps possible)
+const MAX_GAP = 180; // pixels - reduced maximum gap between platforms to keep jumps feasible
 const MIN_GAP = 40;
 const MAX_PLATFORM_AHEAD = 2000;
 
@@ -97,8 +97,8 @@ function init() {
     let px = 300;
     for(let i=0;i<8;i++){
         const w = 80 + Math.random()*160;
-        const gap = Math.min(MAX_GAP, MIN_GAP + Math.random()*200);
-        const py = H-120 - Math.random()*120;
+        const gap = Math.min(MAX_GAP, MIN_GAP + Math.random()*120); // smaller random gap
+        const py = H - 100 - Math.random()*80; // reduced vertical variance
         platforms.push({x: px, y: py, w: w, h: 16});
         if(Math.random() > 0.55) addRandomObstacle(px, w, py);
         px += w + gap;
@@ -109,9 +109,9 @@ function spawnAhead() {
     // ensure platforms ahead up to cameraX + 2000
     let maxX = Math.max(...platforms.map(p=>p.x+p.w));
     while(maxX < cameraX + MAX_PLATFORM_AHEAD) {
-        const w = 80 + Math.random()*200;
-        const gap = Math.min(MAX_GAP, MIN_GAP + Math.random()*220);
-        const y = H - 120 - Math.random()*160;
+        const w = 80 + Math.random()*160;
+        const gap = Math.min(MAX_GAP, MIN_GAP + Math.random()*120);
+        const y = H - 100 - Math.random()*80;
         const nx = maxX + gap;
         platforms.push({x:nx, y:y, w:w, h:16});
         if(Math.random() > 0.5) addRandomObstacle(nx, w, y);
@@ -123,7 +123,9 @@ function addRandomObstacle(platformX, platformW, platformY) {
     // place obstacles relative to a platform
     const types = ['spike','saw','drone','laser','falling'];
     const t = types[Math.floor(Math.random()*types.length)];
-    const baseX = platformX + Math.random() * platformW;
+    // avoid placing obstacles at the extreme edges of the platform
+    const pad = Math.min(16, Math.floor(platformW/4));
+    const baseX = platformX + pad + Math.random() * Math.max(0, platformW - pad*2);
     const baseY = platformY - 24;
     switch(t) {
         case 'spike':
