@@ -14,6 +14,12 @@
         #viewport { position: relative; overflow: hidden; border-right: 1px solid #222; display:flex; align-items:center; justify-content:center; }
         canvas { background: transparent; display: none; border-left: 6px solid #080810; }
 
+        /* touch controls */
+        #touch-controls { position: absolute; left: 0; right: 0; bottom: 18px; display: none; justify-content: space-between; padding: 0 18px; pointer-events: none; }
+        .touch-group { display:flex; gap:12px; pointer-events: auto; }
+        .touch-btn { width:64px; height:64px; border-radius:12px; background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; user-select:none; }
+        .touch-btn:active { background: rgba(255,255,255,0.12); }
+
         #ui { text-align:center; }
         #ui-title { font-family: 'Orbitron'; letter-spacing: 6px; margin-bottom: 20px; }
         .menu { display:flex; gap:12px; justify-content:center; }
@@ -41,6 +47,15 @@
         </div>
 
         <canvas id="gameCanvas" width="900" height="500"></canvas>
+        <div id="touch-controls" aria-hidden="true">
+            <div class="touch-group" id="touch-left-group">
+                <div id="touch-left" class="touch-btn">◀</div>
+                <div id="touch-right" class="touch-btn">▶</div>
+            </div>
+            <div class="touch-group" id="touch-right-group">
+                <div id="touch-jump" class="touch-btn">▲</div>
+            </div>
+        </div>
     </div>
 
     <div id="side">
@@ -323,6 +338,38 @@ function draw() {
 
 window.addEventListener('keydown', (e)=>{ keys[e.key.toLowerCase()] = true; });
 window.addEventListener('keyup', (e)=>{ keys[e.key.toLowerCase()] = false; });
+
+// Touch controls setup
+function setupTouchControls(){
+    const tc = document.getElementById('touch-controls');
+    const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || innerWidth <= 768;
+    if(!tc) return;
+    if(isTouch) tc.style.display = 'flex'; else tc.style.display = 'none';
+
+    const mapBtn = (el, keyName) => {
+        if(!el) return;
+        const start = (e)=>{ e.preventDefault(); keys[keyName] = true; };
+        const end = (e)=>{ e.preventDefault(); keys[keyName] = false; };
+        el.addEventListener('touchstart', start, {passive:false});
+        el.addEventListener('touchend', end);
+        el.addEventListener('mousedown', start);
+        el.addEventListener('mouseup', end);
+        el.addEventListener('mouseleave', end);
+    };
+
+    mapBtn(document.getElementById('touch-left'), 'a');
+    mapBtn(document.getElementById('touch-right'), 'd');
+    // map jump to space key
+    mapBtn(document.getElementById('touch-jump'), ' ');
+
+    window.addEventListener('resize', ()=>{
+        const show = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || innerWidth <= 768;
+        tc.style.display = show ? 'flex' : 'none';
+    });
+}
+
+// initialize touch controls immediately so UI shows before launch
+setupTouchControls();
 
 function launchGame(){
     document.getElementById('ui-menu').style.display = 'none';
