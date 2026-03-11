@@ -121,7 +121,7 @@ function spawnAhead() {
 
 function addRandomObstacle(platformX, platformW, platformY) {
     // place obstacles relative to a platform
-    const types = ['spike','saw','drone','pillar','falling'];
+    const types = ['spike','saw','drone','laser','falling'];
     const t = types[Math.floor(Math.random()*types.length)];
     // avoid placing obstacles at the extreme edges of the platform
     const pad = Math.min(16, Math.floor(platformW/4));
@@ -135,12 +135,12 @@ function addRandomObstacle(platformX, platformW, platformY) {
             obstacles.push({type:'saw', x: baseX, y: baseY - 6, r: 14, ang: 0, vx: 0, vy: 0});
             break;
         case 'drone':
-            obstacles.push({type:'drone', x: baseX, y: baseY - 40, w: 36, h: 20, amp: 20 + Math.random()*40, phase: Math.random()*Math.PI*2, speed: 0.02 + Math.random()*0.04});
+            // simpler static drone (no bobbing, single shape)
+            obstacles.push({type:'drone', x: baseX, y: baseY - 32, w: 28, h: 16});
             break;
-        case 'pillar':
-            // simple solid vertical obstacle sitting on the platform
-            const ph = 48 + Math.floor(Math.random()*48);
-            obstacles.push({type:'pillar', x: baseX, y: platformY - ph, w: 18, h: ph});
+        case 'laser':
+            // vertical laser beam that toggles on/off
+            obstacles.push({type:'laser', x: baseX, y: baseY - 80, w: 6, h: 80, on: Math.random()>0.5, timer: Math.floor(Math.random()*120)});
             break;
         case 'falling':
             obstacles.push({type:'falling', x: baseX, y: baseY - 200, w: 26, h: 26, vy:0, triggered:false});
@@ -187,8 +187,10 @@ function update() {
         if(o.type === 'saw') {
             o.ang += 0.25;
         } else if(o.type === 'drone') {
-            o.phase += o.speed;
-            o.y = (o.y) + Math.sin(o.phase) * 0.5; // small bobbing
+            // static drone: no vertical bobbing
+        } else if(o.type === 'laser') {
+            o.timer = (o.timer + 1) % 180;
+            o.on = o.timer < 90;
         } else if(o.type === 'falling') {
             if(!o.triggered && player.x > o.x - 120 && player.x < o.x + 120) o.triggered = true;
             if(o.triggered) o.vy += 0.8, o.y += o.vy;
@@ -200,10 +202,10 @@ function update() {
             if(aabbCollision(player.x, player.y, player.w, player.h, sx, sy, sw, sh)) die();
         } else if(o.type === 'drone') {
             if(aabbCollision(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)) die();
+        } else if(o.type === 'laser') {
+            if(o.on && aabbCollision(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)) die();
         } else if(o.type === 'spike' || o.type === 'falling' || o.type === 'pillar') {
             if(aabbCollision(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)) die();
-        } else if(o.type === 'laser') {
-            // laser removed; handled as pillar now
         }
     }
 
@@ -266,10 +268,11 @@ function draw() {
             ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-o.r,0); ctx.lineTo(o.r,0); ctx.stroke();
             ctx.restore();
         } else if(o.type === 'drone') {
-            ctx.fillStyle = '#66ddff'; ctx.fillRect(o.x, o.y, o.w, o.h);
-            ctx.fillStyle = '#004'; ctx.fillRect(o.x+6, o.y+4, o.w-12, o.h-6);
-        } else if(o.type === 'pillar') {
-            ctx.fillStyle = '#8844ff'; ctx.fillRect(o.x, o.y, o.w, o.h);
+            // simple drone marker (single neutral shape)
+            ctx.fillStyle = '#66ddff'; ctx.beginPath(); ctx.arc(o.x + o.w/2, o.y + o.h/2, Math.max(6, o.w/3), 0, Math.PI*2); ctx.fill();
+        } else if(o.type === 'laser') {
+            ctx.fillStyle = o.on ? 'rgba(255,30,30,0.9)' : 'rgba(255,30,30,0.25)';
+            ctx.fillRect(o.x, o.y, o.w, o.h);
         } else if(o.type === 'falling') {
             ctx.fillStyle = '#996633'; ctx.fillRect(o.x, o.y, o.w, o.h);
         } else {
