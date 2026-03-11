@@ -121,7 +121,7 @@ function spawnAhead() {
 
 function addRandomObstacle(platformX, platformW, platformY) {
     // place obstacles relative to a platform
-    const types = ['spike','saw','drone','laser','falling'];
+    const types = ['spike','saw','laser','falling'];
     const t = types[Math.floor(Math.random()*types.length)];
     // avoid placing obstacles at the extreme edges of the platform
     const pad = Math.min(16, Math.floor(platformW/4));
@@ -133,10 +133,6 @@ function addRandomObstacle(platformX, platformW, platformY) {
             break;
         case 'saw':
             obstacles.push({type:'saw', x: baseX, y: baseY - 6, r: 14, ang: 0, vx: 0, vy: 0});
-            break;
-        case 'drone':
-            // simpler static drone (no bobbing, single shape)
-            obstacles.push({type:'drone', x: baseX, y: baseY - 32, w: 28, h: 16});
             break;
         case 'laser':
             // vertical laser beam that toggles on/off
@@ -186,8 +182,6 @@ function update() {
     for(const o of obstacles) {
         if(o.type === 'saw') {
             o.ang += 0.25;
-        } else if(o.type === 'drone') {
-            // static drone: no vertical bobbing
         } else if(o.type === 'laser') {
             o.timer = (o.timer + 1) % 180;
             o.on = o.timer < 90;
@@ -200,7 +194,6 @@ function update() {
         if(o.type === 'saw') {
             const sx = o.x - o.r, sy = o.y - o.r, sw = o.r*2, sh = o.r*2;
             if(aabbCollision(player.x, player.y, player.w, player.h, sx, sy, sw, sh)) die();
-        } else if(o.type === 'drone') {
             if(aabbCollision(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)) die();
         } else if(o.type === 'laser') {
             if(o.on && aabbCollision(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)) die();
@@ -267,9 +260,6 @@ function draw() {
             ctx.fillStyle = '#bbbbbb'; ctx.beginPath(); ctx.arc(0,0,o.r,0,Math.PI*2); ctx.fill();
             ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-o.r,0); ctx.lineTo(o.r,0); ctx.stroke();
             ctx.restore();
-        } else if(o.type === 'drone') {
-            // simple drone marker (single neutral shape)
-            ctx.fillStyle = '#66ddff'; ctx.beginPath(); ctx.arc(o.x + o.w/2, o.y + o.h/2, Math.max(6, o.w/3), 0, Math.PI*2); ctx.fill();
         } else if(o.type === 'laser') {
             ctx.fillStyle = o.on ? 'rgba(255,30,30,0.9)' : 'rgba(255,30,30,0.25)';
             ctx.fillRect(o.x, o.y, o.w, o.h);
